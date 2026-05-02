@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { analyzeSymptoms } from "./utils/riskEngine";
+import type { AnalysisResult } from "./utils/riskEngine";
 import { SymptomForm } from "./components/SymptomForm";
-import { ResultScreen } from "./components/ResultScreen";
+import ResultsDashboard from "./components/ResultsDashboard";
+import RedFlagAlert from "./components/RedFlagAlert";
 import "./App.css";
 
 type Severity = "mild" | "moderate" | "severe";
@@ -12,13 +14,15 @@ interface AnalyzePayload {
   duration: string;
 }
 
-type AnalysisResult = ReturnType<typeof analyzeSymptoms>;
-
 function App() {
   const [result, setResult] = useState<AnalysisResult | null>(null);
 
   function handleAnalyze(data: AnalyzePayload) {
-    const analysis = analyzeSymptoms(data.symptoms, data.severity, data.duration);
+    const analysis = analyzeSymptoms({
+      selectedSymptoms: data.symptoms,
+      severity: data.severity,
+      duration: data.duration,
+    });
     setResult(analysis);
   }
 
@@ -45,15 +49,13 @@ function App() {
             <SymptomForm onAnalyze={handleAnalyze} />
           </>
         ) : (
-          <>
-            <div className="page-intro">
-              <h1 className="page-title">Your results</h1>
-              <p className="page-sub">
-                Here's what your symptoms may indicate. Review carefully.
-              </p>
-            </div>
-            <ResultScreen result={result} onReset={handleReset} />
-          </>
+          <div className="results-container">
+            {result.isRedFlag ? (
+              <RedFlagAlert onStartAgain={handleReset} />
+            ) : (
+              <ResultsDashboard result={result} onStartAgain={handleReset} />
+            )}
+          </div>
         )}
       </main>
 
