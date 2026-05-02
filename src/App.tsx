@@ -6,10 +6,12 @@ import ResultsDashboard from "./components/ResultsDashboard";
 import RedFlagAlert from "./components/RedFlagAlert";
 import FaceScan from "./components/FaceScan";
 import AccessibilityMenu from "./components/AccessibilityMenu";
+import HealthDataConnect from "./components/HealthDataConnect";
 import type { FaceScanResult } from "./components/FaceScan";
 import "./App.css";
 
 type Severity = "mild" | "moderate" | "severe";
+type View = 'health' | 'form' | 'scan';
 
 interface AnalyzePayload {
   symptoms: string[];
@@ -19,8 +21,9 @@ interface AnalyzePayload {
 
 function App() {
   const [result, setResult] = useState<AnalysisResult | null>(null);
-  const [view, setView] = useState<'form' | 'scan'>('form');
+  const [view, setView] = useState<View>('health');
   const [scanResult, setScanResult] = useState<FaceScanResult | null>(null);
+  const [healthData, setHealthData] = useState<any | null>(null);
   
   const [accSettings, setAccSettings] = useState({
     highContrast: false,
@@ -30,6 +33,11 @@ function App() {
 
   const handleToggleAcc = (key: 'highContrast' | 'largeText' | 'colourBlindSafe') => {
     setAccSettings(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const handleHealthComplete = (data?: any) => {
+    if (data) setHealthData(data);
+    setView('form');
   };
 
   function handleAnalyze(data: AnalyzePayload) {
@@ -43,7 +51,7 @@ function App() {
 
   function handleReset() {
     setResult(null);
-    setView('form');
+    setView('health');
   }
 
   return (
@@ -72,7 +80,9 @@ function App() {
       </header>
 
       <main className="app-main">
-        {view === 'scan' ? (
+        {view === 'health' ? (
+          <HealthDataConnect onComplete={handleHealthComplete} />
+        ) : view === 'scan' ? (
           <div className="scan-view animate-fade">
             <FaceScan onScanComplete={(res) => setScanResult(res)} />
             <button className="btn-secondary" style={{marginTop: '24px'}} onClick={() => setView('form')}>
@@ -97,6 +107,7 @@ function App() {
               <ResultsDashboard 
                 result={result} 
                 scanResult={scanResult} 
+                healthData={healthData}
                 onStartAgain={handleReset} 
                 onRescanFace={() => setView('scan')}
               />

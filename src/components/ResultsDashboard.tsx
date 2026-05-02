@@ -7,6 +7,7 @@ import type { FaceScanResult } from "./FaceScan";
 type Props = {
   result: AnalysisResult;
   scanResult?: FaceScanResult | null;
+  healthData?: any | null;
   onStartAgain: () => void;
   onRescanFace?: () => void;
 };
@@ -35,7 +36,7 @@ const getImpactData = (riskLevel: string) => {
   }
 };
 
-export default function ResultsDashboard({ result, scanResult, onStartAgain, onRescanFace }: Props) {
+export default function ResultsDashboard({ result, scanResult, healthData, onStartAgain, onRescanFace }: Props) {
   const impactData = getImpactData(result.riskLevel);
 
   const downloadPDF = () => {
@@ -285,6 +286,43 @@ export default function ResultsDashboard({ result, scanResult, onStartAgain, onR
       doc.setFont("helvetica", "normal");
       y += 4;
     }
+    
+    // 6.7 Connected Health Data
+    if (healthData && healthData.metrics) {
+      ensureSpace(35);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(15);
+      doc.text("Connected Health Data", margin, y);
+      
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.setTextColor(100, 116, 139);
+      const brandName = healthData.brand.charAt(0).toUpperCase() + healthData.brand.slice(1);
+      doc.text(`Source: ${brandName} (Demo Profile)`, pageWidth - margin - 55, y);
+      doc.setTextColor(15, 23, 42);
+      y += 8;
+
+      doc.setFontSize(11);
+      const m = healthData.metrics;
+      const metrics = [
+        { label: "Resting Heart Rate:", value: m.heartRate },
+        { label: "Sleep Duration:", value: m.sleep },
+        { label: "Activity Level:", value: m.activity },
+        { label: "Recovery Score:", value: m.recovery },
+        { label: "HRV:", value: m.hrv },
+        { label: "Steps Today:", value: m.steps }
+      ];
+
+      metrics.forEach(item => {
+        ensureSpace(6);
+        doc.setFont("helvetica", "bold");
+        doc.text(item.label, margin + 5, y);
+        doc.setFont("helvetica", "normal");
+        doc.text(item.value, margin + 55, y);
+        y += 6;
+      });
+      y += 8;
+    }
 
     // 7. Safety Guidance
     ensureSpace(25);
@@ -465,6 +503,44 @@ export default function ResultsDashboard({ result, scanResult, onStartAgain, onR
             <p style={{fontSize: '13px', color: '#64748B', margin: 0}}>
               Facial scan observations are based on visible wellness signals only. They are included to help you describe changes, not to diagnose a condition.
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* 6.7 Connected Health Data */}
+      {healthData && healthData.metrics && (
+        <div style={styles.card}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+            <h3 style={{...styles.cardTitle, color: '#2F6FED', margin: 0}}>Connected health metrics</h3>
+            <span style={{ fontSize: '12px', fontWeight: 600, padding: '4px 8px', borderRadius: '4px', backgroundColor: '#F1F5F9', color: '#475569' }}>
+              Source: {healthData.brand.charAt(0).toUpperCase() + healthData.brand.slice(1)}
+            </span>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
+            <div style={styles.healthMetricItem}>
+              <span style={styles.healthMetricLabel}>Heart Rate</span>
+              <span style={styles.healthMetricValue}>{healthData.metrics.heartRate}</span>
+            </div>
+            <div style={styles.healthMetricItem}>
+              <span style={styles.healthMetricLabel}>Sleep</span>
+              <span style={styles.healthMetricValue}>{healthData.metrics.sleep}</span>
+            </div>
+            <div style={styles.healthMetricItem}>
+              <span style={styles.healthMetricLabel}>Activity</span>
+              <span style={styles.healthMetricValue}>{healthData.metrics.activity}</span>
+            </div>
+            <div style={styles.healthMetricItem}>
+              <span style={styles.healthMetricLabel}>Recovery</span>
+              <span style={styles.healthMetricValue}>{healthData.metrics.recovery}</span>
+            </div>
+            <div style={styles.healthMetricItem}>
+              <span style={styles.healthMetricLabel}>HRV</span>
+              <span style={styles.healthMetricValue}>{healthData.metrics.hrv}</span>
+            </div>
+            <div style={styles.healthMetricItem}>
+              <span style={styles.healthMetricLabel}>Steps</span>
+              <span style={styles.healthMetricValue}>{healthData.metrics.steps}</span>
+            </div>
           </div>
         </div>
       )}
