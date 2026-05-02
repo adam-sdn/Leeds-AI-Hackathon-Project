@@ -7,98 +7,153 @@ type Props = {
   onStartAgain: () => void;
 };
 
+const ImpactMetric = ({ label, level }: { label: string; level: 'Low' | 'Moderate' | 'High' }) => {
+  const bars = { Low: 1, Moderate: 2, High: 3 };
+  const colors = { Low: '#22C55E', Moderate: '#F59E0B', High: '#EF4444' };
+  
+  return (
+    <div style={styles.metricRow}>
+      <span style={styles.metricLabel}>{label}</span>
+      <div style={styles.metricBarContainer}>
+        {[1, 2, 3].map(i => (
+          <div key={i} style={{
+            ...styles.metricBar,
+            backgroundColor: i <= bars[level] ? colors[level] : '#E2E8F0'
+          }} />
+        ))}
+      </div>
+      <span style={{...styles.metricValue, color: colors[level]}}>{level}</span>
+    </div>
+  );
+};
+
 export default function ResultsDashboard({ result, onStartAgain }: Props) {
+  const impactLevel = result.riskLevel === 'urgent' ? 'High' : result.riskLevel === 'moderate' ? 'Moderate' : 'Low';
+
   const downloadPDF = () => {
     const doc = new jsPDF();
+    const margin = 15;
+    const pageWidth = 210;
+    const contentWidth = pageWidth - (margin * 2);
     let y = 35;
 
-    // Header & Logo
-    doc.addImage(logo, "PNG", 150, 10, 40, 15);
-    doc.setDrawColor(200);
-    doc.line(10, 25, 200, 25);
+    // 1. Header & Logo
+    doc.addImage(logo, "PNG", pageWidth - 55, 10, 40, 15);
+    doc.setDrawColor(226, 232, 240); // Soft border color
+    doc.line(margin, 28, pageWidth - margin, 28);
 
-    doc.setFontSize(18);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(20);
     doc.setTextColor(15, 23, 42); // Navy
-    doc.text("Kashf Care Summary", 10, y);
+    doc.text("Kashf Care Summary", margin, y);
     y += 10;
 
+    doc.setFont("helvetica", "normal");
     doc.setFontSize(10);
     doc.setTextColor(100, 116, 139); // Muted
-    doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 10, y);
-    y += 15;
+    doc.text(`Generated on: ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`, margin, y);
+    y += 20;
 
-    // Risk Summary
-    doc.setFontSize(16);
+    // 2. Risk Overview
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(15);
     doc.setTextColor(15, 23, 42);
-    doc.text("Risk Summary", 10, y);
-    y += 8;
-    doc.setFontSize(12);
-    doc.setTextColor(result.isRedFlag ? 239 : 47, result.isRedFlag ? 68 : 111, result.isRedFlag ? 68 : 237);
-    doc.text(result.riskLabel, 10, y);
-    y += 8;
-    doc.setFontSize(11);
-    doc.setTextColor(51, 65, 85);
-    const summaryLines = doc.splitTextToSize(result.riskSummary, 180);
-    doc.text(summaryLines, 10, y);
-    y += (summaryLines.length * 6) + 10;
-
-    // Recommendation
-    doc.setFontSize(14);
-    doc.setTextColor(15, 23, 42);
-    doc.text("Recommendation", 10, y);
-    y += 8;
-    doc.setFontSize(11);
-    const recLines = doc.splitTextToSize(result.recommendation, 180);
-    doc.text(recLines, 10, y);
-    y += (recLines.length * 6) + 12;
-
-    // GP Summary Table-like
-    doc.setFontSize(14);
-    doc.text("Signals Summary for GP", 10, y);
-    y += 8;
-    doc.setFontSize(10);
-    doc.text(`Symptoms:`, 10, y);
-    const sympLines = doc.splitTextToSize(result.selectedSymptomLabels.join(", "), 140);
-    doc.text(sympLines, 40, y);
-    y += (sympLines.length * 5) + 2;
-    doc.text(`Severity:`, 10, y);
-    doc.text(result.severity, 40, y);
-    y += 6;
-    doc.text(`Duration:`, 10, y);
-    doc.text(result.duration || "Not specified", 40, y);
-    y += 15;
-
-    // Why
-    doc.setFontSize(12);
-    doc.text("Why this recommendation?", 10, y);
-    y += 8;
-    doc.setFontSize(10);
-    result.why.forEach(line => {
-      const wrappedLine = doc.splitTextToSize(`- ${line}`, 180);
-      doc.text(wrappedLine, 10, y);
-      y += (wrappedLine.length * 5);
-    });
+    doc.text("Risk Overview", margin, y);
     y += 10;
 
-    // Questions
     doc.setFontSize(12);
-    doc.text("Questions to ask your GP", 10, y);
-    y += 8;
-    doc.setFontSize(10);
+    const riskColor = result.riskLevel === 'urgent' ? [239, 68, 68] : result.riskLevel === 'moderate' ? [245, 158, 11] : [34, 197, 94];
+    doc.setTextColor(riskColor[0], riskColor[1], riskColor[2]);
+    doc.text(`• ${result.riskLabel}`, margin, y);
+    y += 7;
+    
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(11);
+    doc.setTextColor(51, 65, 85);
+    const riskSummaryLines = doc.splitTextToSize(result.riskSummary, contentWidth);
+    doc.text(riskSummaryLines, margin, y);
+    y += (riskSummaryLines.length * 6) + 12;
+
+    // 3. Recommended Next Step
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(15);
+    doc.setTextColor(15, 23, 42);
+    doc.text("Recommended Next Step", margin, y);
+    y += 10;
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(11);
+    const recLines = doc.splitTextToSize(result.recommendation, contentWidth);
+    doc.text(recLines, margin, y);
+    y += (recLines.length * 6) + 15;
+
+    // 4. Summary for your GP
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(15);
+    doc.text("Summary for your GP", margin, y);
+    y += 10;
+
+    doc.setFontSize(11);
+    const gpFields = [
+      { label: "Symptoms:", value: result.selectedSymptomLabels.join(", ") },
+      { label: "Severity:", value: result.severity },
+      { label: "Duration:", value: result.duration || "Not specified" },
+      { label: "Risk Level:", value: result.riskLabel },
+      { label: "Red Flag:", value: result.isRedFlag ? "Yes ⚠️" : "No" }
+    ];
+
+    gpFields.forEach(field => {
+      doc.setFont("helvetica", "bold");
+      doc.text(field.label, margin, y);
+      doc.setFont("helvetica", "normal");
+      const valLines = doc.splitTextToSize(field.value, contentWidth - 40);
+      doc.text(valLines, margin + 40, y);
+      y += (valLines.length * 6);
+    });
+    y += 12;
+
+    // 5. Why Kashf suggests this
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(15);
+    doc.text("Why Kashf suggests this", margin, y);
+    y += 10;
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(11);
+    result.why.forEach(line => {
+      const wrappedLine = doc.splitTextToSize(`• ${line}`, contentWidth);
+      doc.text(wrappedLine, margin, y);
+      y += (wrappedLine.length * 6);
+    });
+    y += 12;
+
+    // 6. Questions for your GP
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(15);
+    doc.text("Questions for your GP", margin, y);
+    y += 10;
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(11);
     result.gpQuestions.forEach(q => {
-      const wrappedQ = doc.splitTextToSize(`- ${q}`, 180);
-      doc.text(wrappedQ, 10, y);
-      y += (wrappedQ.length * 5);
+      const wrappedQ = doc.splitTextToSize(`• ${q}`, contentWidth);
+      doc.text(wrappedQ, margin, y);
+      y += (wrappedQ.length * 6);
     });
     y += 20;
 
-    // Footer Disclaimer
-    doc.setFontSize(9);
+    // 7. Safety Guidance
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(12);
     doc.setTextColor(153, 27, 27); // Dark red
-    doc.text("DISCLAIMER: This is not a medical diagnosis.", 10, y);
-    y += 5;
-    doc.setTextColor(100, 116, 139);
-    doc.text("If symptoms are severe or worsening, seek professional medical advice immediately.", 10, y);
+    doc.text("Safety Guidance", margin, y);
+    y += 8;
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    const safetyText = "This is not a medical diagnosis. If your symptoms are severe, sudden, worsening, or you are worried, seek medical advice. If you experience chest pain, difficulty breathing, or signs of stroke, call 999 or go to A&E.";
+    const safetyLines = doc.splitTextToSize(safetyText, contentWidth);
+    doc.text(safetyLines, margin, y);
 
     doc.save("kashf-report.pdf");
   };
@@ -121,6 +176,37 @@ export default function ResultsDashboard({ result, onStartAgain }: Props) {
         <h3 style={styles.cardTitle}>Recommended Next Step</h3>
         <div style={styles.nextStepBox}>
            <p style={styles.nextStepText}>{result.recommendation}</p>
+        </div>
+      </div>
+
+      {/* 3. Care Impact Overview */}
+      <div style={styles.card}>
+        <h3 style={styles.cardTitle}>Care Impact Overview</h3>
+        <p style={{fontSize: '14px', color: '#64748B', marginBottom: '20px', marginTop: '4px'}}>
+          Understanding the real-world impact of your care timeline.
+        </p>
+        
+        <div style={styles.metricsContainer}>
+          <ImpactMetric label="Time Impact" level={impactLevel} />
+          <ImpactMetric label="Disruption" level={impactLevel} />
+          <ImpactMetric label="Urgency Risk" level={impactLevel} />
+        </div>
+
+        <div style={styles.comparisonGrid}>
+          <div style={styles.comparisonColumn}>
+            <span style={{...styles.comparisonTitle, color: '#15803D', background: '#DCFCE7'}}>If you act now</span>
+            <ul style={styles.list}>
+              <li style={{...styles.listItem, fontSize: '13px'}}>Routine GP visit likely</li>
+              <li style={{...styles.listItem, fontSize: '13px'}}>Lower life disruption</li>
+            </ul>
+          </div>
+          <div style={styles.comparisonColumn}>
+            <span style={{...styles.comparisonTitle, color: '#B91C1C', background: '#FEE2E2'}}>If delayed</span>
+            <ul style={styles.list}>
+              <li style={{...styles.listItem, fontSize: '13px'}}>Possible urgent care</li>
+              <li style={{...styles.listItem, fontSize: '13px'}}>Higher stress & waiting</li>
+            </ul>
+          </div>
         </div>
       </div>
 
@@ -358,6 +444,60 @@ const styles = {
     cursor: "pointer",
     transition: 'all 0.2s',
     width: '100%',
+    width: '100%',
     maxWidth: '320px',
+  },
+  metricRow: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: '12px',
+    gap: '12px',
+  },
+  metricLabel: {
+    fontSize: '14px',
+    fontWeight: '600',
+    color: '#0F172A',
+    width: '100px',
+  },
+  metricBarContainer: {
+    display: 'flex',
+    gap: '4px',
+    flex: 1,
+  },
+  metricBar: {
+    height: '6px',
+    flex: 1,
+    borderRadius: '3px',
+  },
+  metricValue: {
+    fontSize: '12px',
+    fontWeight: '700',
+    width: '60px',
+    textAlign: 'right' as const,
+  },
+  metricsContainer: {
+    marginBottom: '24px',
+  },
+  comparisonGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+    gap: '16px',
+    marginTop: '20px',
+    paddingTop: '20px',
+    borderTop: '1px solid #E2E8F0',
+  },
+  comparisonColumn: {
+    display: 'flex',
+    flexDirection: 'column' as const,
+  },
+  comparisonTitle: {
+    fontSize: '12px',
+    fontWeight: '800',
+    padding: '4px 10px',
+    borderRadius: '6px',
+    alignSelf: 'flex-start',
+    marginBottom: '8px',
+    textTransform: 'uppercase' as const,
   },
 };
