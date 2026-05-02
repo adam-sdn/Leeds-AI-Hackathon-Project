@@ -879,4 +879,64 @@ const styles = {
     marginBottom: '8px',
     textTransform: 'uppercase' as const,
   },
+  healthMetricLabel: {
+    fontSize: '11px',
+    color: '#64748B',
+    fontWeight: 600,
+    textTransform: 'uppercase' as const,
+    letterSpacing: '0.05em',
+  },
+  healthMetricValue: {
+    fontSize: '18px',
+    fontWeight: '800',
+    color: '#0F172A',
+  },
+  healthMetricCard: {
+    padding: '16px',
+    backgroundColor: '#F8FAFC',
+    borderRadius: '12px',
+    border: '1px solid #F1F5F9'
+  }
 };
+
+function HealthMetricCard({ icon, label, value, status, badge, sub }: { icon: string; label: string; value: string; status?: any; badge?: boolean; sub?: string }) {
+  return (
+    <div style={styles.healthMetricCard}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+        <span style={{ fontSize: '18px' }}>{icon}</span>
+        <span style={styles.healthMetricLabel}>{label}</span>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+        <span style={styles.healthMetricValue}>{value}</span>
+        {badge && (
+          <span style={{ 
+            fontSize: '10px', 
+            padding: '2px 6px', 
+            borderRadius: '4px', 
+            backgroundColor: '#E0F2FE', 
+            color: '#0369A1', 
+            fontWeight: 700,
+            textTransform: 'uppercase'
+          }}>
+            {value}
+          </span>
+        )}
+      </div>
+      {sub && <div style={{ fontSize: '10px', color: '#94A3B8', marginTop: '2px' }}>{sub}</div>}
+      {status && (
+        <div style={{ 
+          fontSize: '11px', 
+          color: status.color, 
+          fontWeight: 600, 
+          marginTop: '6px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '4px'
+        }}>
+          <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: status.color }} />
+          {status.text}
+        </div>
+      )}
+    </div>
+  );
+}
