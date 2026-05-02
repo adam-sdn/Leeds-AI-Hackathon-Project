@@ -17,20 +17,20 @@ const getImpactData = (riskLevel: string) => {
       return {
         actNow: ['Likely self-care or pharmacist advice', 'Minimal disruption'],
         delayed: ['Symptoms may persist slightly longer', 'Still low risk'],
-        impact: { time: 'Minimal', complexity: 'Low' }
+        impact: { time: 'Minimal', complexity: 'Low', escalation: 'Low' }
       };
     case 'urgent':
       return {
         actNow: ['Immediate urgent care (A&E or 999)', 'Faster intervention'],
         delayed: ['Increased risk of complications', 'Higher stress and longer recovery'],
-        impact: { time: 'High', complexity: 'High' }
+        impact: { time: 'High', complexity: 'High', escalation: 'High' }
       };
     case 'moderate':
     default:
       return {
         actNow: ['Likely GP consultation', 'Lower disruption and faster reassurance'],
         delayed: ['Possible escalation to urgent care', 'Increased stress and waiting time'],
-        impact: { time: '1–2 days', complexity: 'Moderate' }
+        impact: { time: '1–2 days', complexity: 'Moderate', escalation: 'Moderate' }
       };
   }
 };
@@ -167,6 +167,8 @@ export default function ResultsDashboard({ result, scanResult, onStartAgain, onR
     addBullet(`Time disruption: ${impactData.impact.time}`);
     y += 2;
     addBullet(`Care complexity: ${impactData.impact.complexity}`);
+    y += 2;
+    addBullet(`Escalation risk: ${impactData.impact.escalation}`);
     y += 6;
 
     // 3.6 What this could mean for you (Explanation)
@@ -349,19 +351,26 @@ export default function ResultsDashboard({ result, scanResult, onStartAgain, onR
 
         <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid #E2E8F0' }}>
           <h4 style={{ margin: '0 0 12px 0', fontSize: '14px', color: '#0F172A' }}>Estimated impact</h4>
-          <div style={{ display: 'flex', gap: '24px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px', background: '#F8FAFC', borderRadius: '8px' }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
               <div>
-                <div style={{ fontSize: '12px', color: '#64748B' }}>Time disruption</div>
-                <div style={{ fontSize: '14px', color: '#0F172A', fontWeight: 500 }}>{impactData.impact.time}</div>
+                <div style={{ fontSize: '11px', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.025em' }}>Time</div>
+                <div style={{ fontSize: '14px', color: '#0F172A', fontWeight: 600 }}>{impactData.impact.time}</div>
               </div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px', background: '#F8FAFC', borderRadius: '8px' }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
               <div>
-                <div style={{ fontSize: '12px', color: '#64748B' }}>Care complexity</div>
-                <div style={{ fontSize: '14px', color: '#0F172A', fontWeight: 500 }}>{impactData.impact.complexity}</div>
+                <div style={{ fontSize: '11px', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.025em' }}>Care</div>
+                <div style={{ fontSize: '14px', color: '#0F172A', fontWeight: 600 }}>{impactData.impact.complexity}</div>
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px', background: '#F8FAFC', borderRadius: '8px' }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              <div>
+                <div style={{ fontSize: '11px', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.025em' }}>Risk</div>
+                <div style={{ fontSize: '14px', color: '#0F172A', fontWeight: 600 }}>{impactData.impact.escalation}</div>
               </div>
             </div>
           </div>

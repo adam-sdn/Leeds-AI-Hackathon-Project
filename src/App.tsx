@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { analyzeSymptoms } from "./utils/riskEngine";
 import type { AnalysisResult } from "./utils/riskEngine";
 import { SymptomForm } from "./components/SymptomForm";
 import ResultsDashboard from "./components/ResultsDashboard";
 import RedFlagAlert from "./components/RedFlagAlert";
 import FaceScan from "./components/FaceScan";
+import AccessibilityMenu from "./components/AccessibilityMenu";
 import type { FaceScanResult } from "./components/FaceScan";
 import "./App.css";
 
@@ -20,6 +21,16 @@ function App() {
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [view, setView] = useState<'form' | 'scan'>('form');
   const [scanResult, setScanResult] = useState<FaceScanResult | null>(null);
+  
+  const [accSettings, setAccSettings] = useState({
+    highContrast: false,
+    largeText: false,
+    colourBlindSafe: false
+  });
+
+  const handleToggleAcc = (key: 'highContrast' | 'largeText' | 'colourBlindSafe') => {
+    setAccSettings(prev => ({ ...prev, [key]: !prev[key] }));
+  };
 
   function handleAnalyze(data: AnalyzePayload) {
     const analysis = analyzeSymptoms({
@@ -36,14 +47,21 @@ function App() {
   }
 
   return (
-    <div className="app-shell">
+    <div 
+      className="app-shell"
+      data-high-contrast={accSettings.highContrast}
+      data-large-text={accSettings.largeText}
+      data-colour-blind={accSettings.colourBlindSafe}
+    >
       <header className="header">
         <div className="brand-header-group" onClick={handleReset}>
           <div className="brand-mark">K</div>
           <span className="brand-text">kashf<span className="brand-dot">.ai</span></span>
         </div>
 
-        <div className="header-nav">
+        <div className="header-nav" style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+          <AccessibilityMenu settings={accSettings} onToggle={handleToggleAcc} />
+          
           <button 
             className={`nav-btn ${view === 'scan' ? 'nav-btn--active' : ''}`}
             onClick={() => { setView(view === 'scan' ? 'form' : 'scan'); setResult(null); }}

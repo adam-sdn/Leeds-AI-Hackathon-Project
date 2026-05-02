@@ -56,3 +56,27 @@ img {
 body {
   font-family: "Geist Variable", system-ui, sans-serif;
 }
+
+/* ─── Accessibility Overrides ───────────────────────────────────── */
+[data-high-contrast="true"] {
+  --blue: #0044CC !important;
+  --text: #000000 !important;
+  --muted: #000000 !important;
+  --border: #000000 !important;
+  --bg: #FFFFFF !important;
+  --navy: #000000 !important;
+}
+
+[data-large-text="true"] {
+  font-size: 18px !important;
+}
+
+[data-large-text="true"] h1 { font-size: 40px !important; }
+[data-large-text="true"] h2 { font-size: 32px !important; }
+[data-large-text="true"] h3 { font-size: 24px !important; }
+
+[data-colour-blind="true"] {
+  --blue: #0072B2 !important; /* Blue-Blind safe */
+  --red: #D55E00 !important;  /* Red-Blind safe */
+  --green: #009E73 !important; /* Green-Blind safe */
+}
