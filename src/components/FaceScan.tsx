@@ -132,7 +132,9 @@ export default function FaceScan({ onScanComplete }: Props) {
           setCountdown((prev) => {
             if (prev <= 1) {
               clearInterval(timerRef.current);
-              handleScanComplete();
+              setTimeout(() => {
+                handleScanComplete();
+              }, 0);
               return 0;
             }
             return prev - 1;

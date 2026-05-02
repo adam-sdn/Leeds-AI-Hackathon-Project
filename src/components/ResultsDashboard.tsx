@@ -37,8 +37,50 @@ export default function ResultsDashboard({ result, scanResult, onStartAgain }: P
     const doc = new jsPDF();
     const margin = 15;
     const pageWidth = 210;
+    const pageHeight = 297;
     const contentWidth = pageWidth - (margin * 2);
+    const bottomMargin = 20;
     let y = 35;
+
+    // Helper: Add page if needed
+    const ensureSpace = (requiredHeight: number) => {
+      if (y + requiredHeight > pageHeight - bottomMargin) {
+        doc.addPage();
+        y = 20; // reset to top margin
+        
+        // Add continuation header
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(10);
+        doc.setTextColor(15, 23, 42);
+        doc.text("Kashf Care Summary (cont.)", margin, y);
+        doc.addImage(logo, "PNG", pageWidth - 35, y - 5, 20, 7.5);
+        y += 15;
+      }
+    };
+
+    // Helper: Add wrapped text and update y
+    const addWrappedText = (text: string, x: number, maxWidth: number, lineHeight: number = 6) => {
+      const lines = doc.splitTextToSize(text, maxWidth);
+      ensureSpace(lines.length * lineHeight);
+      doc.text(lines, x, y);
+      y += lines.length * lineHeight;
+    };
+
+    // Helper: Add bullet point with hanging indent and update y
+    const addBullet = (text: string) => {
+      const bulletLineHeight = 6;
+      const bulletX = margin;
+      const textX = margin + 5;
+      const textMaxWidth = contentWidth - 5;
+      
+      const lines = doc.splitTextToSize(text, textMaxWidth);
+      ensureSpace(lines.length * bulletLineHeight);
+      
+      doc.text("•", bulletX, y);
+      doc.text(lines, textX, y);
+      
+      y += lines.length * bulletLineHeight;
+    };
 
     // 1. Header & Logo
     doc.addImage(logo, "PNG", pageWidth - 55, 10, 40, 15);
@@ -55,46 +97,80 @@ export default function ResultsDashboard({ result, scanResult, onStartAgain }: P
     doc.setFontSize(10);
     doc.setTextColor(100, 116, 139); // Muted
     doc.text(`Generated on: ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`, margin, y);
-    y += 20;
+    y += 15;
 
     // 2. Risk Overview
+    ensureSpace(20);
     doc.setFont("helvetica", "bold");
     doc.setFontSize(15);
     doc.setTextColor(15, 23, 42);
     doc.text("Risk Overview", margin, y);
-    y += 10;
+    y += 8;
 
     doc.setFontSize(12);
     const riskColor = result.riskLevel === 'urgent' ? [239, 68, 68] : result.riskLevel === 'moderate' ? [245, 158, 11] : [34, 197, 94];
     doc.setTextColor(riskColor[0], riskColor[1], riskColor[2]);
-    doc.text(`• ${result.riskLabel}`, margin, y);
-    y += 7;
+    addBullet(result.riskLabel);
     
     doc.setFont("helvetica", "normal");
     doc.setFontSize(11);
     doc.setTextColor(51, 65, 85);
-    const riskSummaryLines = doc.splitTextToSize(result.riskSummary, contentWidth);
-    doc.text(riskSummaryLines, margin, y);
-    y += (riskSummaryLines.length * 6) + 12;
+    y += 2;
+    addWrappedText(result.riskSummary, margin, contentWidth);
+    y += 8;
 
     // 3. Recommended Next Step
+    ensureSpace(15);
     doc.setFont("helvetica", "bold");
     doc.setFontSize(15);
     doc.setTextColor(15, 23, 42);
     doc.text("Recommended Next Step", margin, y);
-    y += 10;
+    y += 8;
 
     doc.setFont("helvetica", "normal");
     doc.setFontSize(11);
-    const recLines = doc.splitTextToSize(result.recommendation, contentWidth);
-    doc.text(recLines, margin, y);
-    y += (recLines.length * 6) + 15;
+    addWrappedText(result.recommendation, margin, contentWidth);
+    y += 8;
+
+    // 3.5 Care Impact Overview
+    ensureSpace(20);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(15);
+    doc.setTextColor(15, 23, 42);
+    doc.text("Care Impact Overview", margin, y);
+    y += 8;
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(11);
+    addBullet(`Time Impact: ${impactLevel}`);
+    addBullet(`Disruption: ${impactLevel}`);
+    addBullet(`Urgency Risk: ${impactLevel}`);
+    y += 6;
+
+    // 3.6 What this could mean for you (Explanation)
+    if (result.biggerPicture && result.biggerPicture.length > 0) {
+      ensureSpace(15);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(15);
+      doc.setTextColor(15, 23, 42);
+      doc.text("What this could mean for you", margin, y);
+      y += 8;
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(11);
+      result.biggerPicture.forEach(line => {
+        addBullet(line);
+        y += 2;
+      });
+      y += 6;
+    }
 
     // 4. Summary for your GP
+    ensureSpace(15);
     doc.setFont("helvetica", "bold");
     doc.setFontSize(15);
     doc.text("Summary for your GP", margin, y);
-    y += 10;
+    y += 8;
 
     doc.setFontSize(11);
     const gpFields = [
@@ -106,66 +182,70 @@ export default function ResultsDashboard({ result, scanResult, onStartAgain }: P
     ];
 
     gpFields.forEach(field => {
+      const labelWidth = 35;
+      const valMaxWidth = contentWidth - labelWidth;
+      const lines = doc.splitTextToSize(field.value, valMaxWidth);
+      
+      ensureSpace(Math.max(6, lines.length * 6));
+      
       doc.setFont("helvetica", "bold");
       doc.text(field.label, margin, y);
       doc.setFont("helvetica", "normal");
-      const valLines = doc.splitTextToSize(field.value, contentWidth - 40);
-      doc.text(valLines, margin + 40, y);
-      y += (valLines.length * 6);
+      
+      doc.text(lines, margin + labelWidth, y);
+      y += (lines.length * 6) + 2;
     });
-    y += 12;
+    y += 8;
 
     // 5. Why Kashf suggests this
+    ensureSpace(15);
     doc.setFont("helvetica", "bold");
     doc.setFontSize(15);
     doc.text("Why Kashf suggests this", margin, y);
-    y += 10;
+    y += 8;
 
     doc.setFont("helvetica", "normal");
     doc.setFontSize(11);
     result.why.forEach(line => {
-      const wrappedLine = doc.splitTextToSize(`• ${line}`, contentWidth);
-      doc.text(wrappedLine, margin, y);
-      y += (wrappedLine.length * 6);
+      addBullet(line);
+      y += 2;
     });
-    y += 12;
+    y += 8;
 
     // 6. Questions for your GP
+    ensureSpace(15);
     doc.setFont("helvetica", "bold");
     doc.setFontSize(15);
     doc.text("Questions for your GP", margin, y);
-    y += 10;
+    y += 8;
 
     doc.setFont("helvetica", "normal");
     doc.setFontSize(11);
     result.gpQuestions.forEach(q => {
-      const wrappedQ = doc.splitTextToSize(`• ${q}`, contentWidth);
-      doc.text(wrappedQ, margin, y);
-      y += (wrappedQ.length * 6);
+      addBullet(q);
+      y += 2;
     });
-    y += 12;
+    y += 8;
 
     // 6.5 Facial Wellness Observations
     if (scanResult && scanResult.observations.length > 0) {
+      ensureSpace(15);
       doc.setFont("helvetica", "bold");
       doc.setFontSize(15);
       doc.text("Facial Wellness Observations", margin, y);
-      y += 10;
+      y += 8;
 
       doc.setFont("helvetica", "normal");
       doc.setFontSize(11);
       scanResult.observations.forEach(obs => {
-        const wrappedObs = doc.splitTextToSize(`• ${obs.label}`, contentWidth);
-        doc.text(wrappedObs, margin, y);
-        y += (wrappedObs.length * 6);
+        addBullet(obs.label);
+        y += 2;
       });
-      y += 12;
+      y += 8;
     }
-    
-    // Safety Padding
-    y += 8;
 
     // 7. Safety Guidance
+    ensureSpace(25);
     doc.setFont("helvetica", "bold");
     doc.setFontSize(12);
     doc.setTextColor(153, 27, 27); // Dark red
@@ -175,8 +255,7 @@ export default function ResultsDashboard({ result, scanResult, onStartAgain }: P
     doc.setFont("helvetica", "normal");
     doc.setFontSize(10);
     const safetyText = "This is not a medical diagnosis. If your symptoms are severe, sudden, worsening, or you are worried, seek medical advice. If you experience chest pain, difficulty breathing, or signs of stroke, call 999 or go to A&E.";
-    const safetyLines = doc.splitTextToSize(safetyText, contentWidth);
-    doc.text(safetyLines, margin, y);
+    addWrappedText(safetyText, margin, contentWidth, 5);
 
     doc.save("kashf-report.pdf");
   };
