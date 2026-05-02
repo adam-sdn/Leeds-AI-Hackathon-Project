@@ -2,8 +2,11 @@ import { jsPDF } from "jspdf";
 import logo from "../assets/logo.png";
 import type { AnalysisResult } from "../utils/riskEngine";
 
+import type { FaceScanResult } from "./FaceScan";
+
 type Props = {
   result: AnalysisResult;
+  scanResult?: FaceScanResult | null;
   onStartAgain: () => void;
 };
 
@@ -27,7 +30,7 @@ const ImpactMetric = ({ label, level }: { label: string; level: 'Low' | 'Moderat
   );
 };
 
-export default function ResultsDashboard({ result, onStartAgain }: Props) {
+export default function ResultsDashboard({ result, scanResult, onStartAgain }: Props) {
   const impactLevel = result.riskLevel === 'urgent' ? 'High' : result.riskLevel === 'moderate' ? 'Moderate' : 'Low';
 
   const downloadPDF = () => {
@@ -140,7 +143,27 @@ export default function ResultsDashboard({ result, onStartAgain }: Props) {
       doc.text(wrappedQ, margin, y);
       y += (wrappedQ.length * 6);
     });
-    y += 20;
+    y += 12;
+
+    // 6.5 Facial Wellness Observations
+    if (scanResult && scanResult.observations.length > 0) {
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(15);
+      doc.text("Facial Wellness Observations", margin, y);
+      y += 10;
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(11);
+      scanResult.observations.forEach(obs => {
+        const wrappedObs = doc.splitTextToSize(`• ${obs.label}`, contentWidth);
+        doc.text(wrappedObs, margin, y);
+        y += (wrappedObs.length * 6);
+      });
+      y += 12;
+    }
+    
+    // Safety Padding
+    y += 8;
 
     // 7. Safety Guidance
     doc.setFont("helvetica", "bold");
@@ -268,6 +291,23 @@ export default function ResultsDashboard({ result, onStartAgain }: Props) {
           ))}
         </ul>
       </div>
+
+      {/* 6.5 Facial Wellness Observations */}
+      {scanResult && scanResult.observations.length > 0 && (
+        <div style={styles.card}>
+          <h3 style={{...styles.cardTitle, color: '#2F6FED'}}>Facial wellness observations</h3>
+          <ul style={styles.list}>
+            {scanResult.observations.map((obs, index) => (
+              <li key={index} style={{...styles.listItem, color: '#0F172A', fontWeight: 500}}>{obs.label}</li>
+            ))}
+          </ul>
+          <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #E2E8F0' }}>
+            <p style={{fontSize: '13px', color: '#64748B', fontStyle: 'italic', margin: 0}}>
+              Facial scan observations are visible wellness signals only and are not a medical diagnosis.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* 7. Safety Guidance */}
       <div style={styles.safetyCard}>

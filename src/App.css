@@ -26,14 +26,52 @@
 /* ─── Header ────────────────────────────────────────────────────── */
 .header {
   display: flex;
-  justify-content: center;
+  justify-content: space-between;
   align-items: center;
-  gap: 12px;
-  padding: 18px 24px;
+  padding: 16px 24px;
   background-color: var(--navy);
   position: sticky;
   top: 0;
   z-index: 100;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+}
+
+.brand-header-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.brand-header-group:hover {
+  opacity: 0.8;
+}
+
+.header-nav {
+  display: flex;
+  gap: 12px;
+}
+
+.nav-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.nav-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.nav-btn--active {
+  background: var(--blue);
+  border-color: var(--blue);
 }
 
 .brand-mark {
@@ -617,4 +655,32 @@
 
 .red-flag-card button:hover {
   background-color: #dc2626;
+}
+
+/* ─── Scan View ─────────────────────────────────────────────────── */
+.scan-view {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.btn-secondary {
+  background: white;
+  border: 1.5px solid var(--border);
+  color: var(--text);
+  padding: 12px 24px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-secondary:hover {
+  background: var(--bg);
+  border-color: var(--blue);
+  color: var(--blue);
 }
