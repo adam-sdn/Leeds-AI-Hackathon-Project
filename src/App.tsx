@@ -66,4 +66,10 @@ function App() {
   );
 }
 
+import FaceScan from "./components/FaceScan";
+
+function App() {
+  return <FaceScan />;
+}
+
 export default App;
