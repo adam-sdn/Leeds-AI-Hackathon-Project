@@ -1,3 +1,4 @@
+import { jsPDF } from "jspdf";
 import type { AnalysisResult } from "../utils/riskEngine";
 
 type Props = {
@@ -6,6 +7,97 @@ type Props = {
 };
 
 export default function ResultsDashboard({ result, onStartAgain }: Props) {
+  const downloadPDF = () => {
+    const doc = new jsPDF();
+    let y = 20;
+
+    // Header
+    doc.setFontSize(22);
+    doc.setTextColor(15, 23, 42); // Navy
+    doc.text("Kashf Care Summary", 20, y);
+    y += 10;
+
+    doc.setFontSize(10);
+    doc.setTextColor(100, 116, 139); // Muted
+    doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 20, y);
+    y += 15;
+
+    // Risk Summary
+    doc.setFontSize(16);
+    doc.setTextColor(15, 23, 42);
+    doc.text("Risk Summary", 20, y);
+    y += 8;
+    doc.setFontSize(12);
+    doc.setTextColor(result.isRedFlag ? 239 : 47, result.isRedFlag ? 68 : 111, result.isRedFlag ? 68 : 237);
+    doc.text(result.riskLabel, 20, y);
+    y += 8;
+    doc.setFontSize(11);
+    doc.setTextColor(51, 65, 85);
+    const summaryLines = doc.splitTextToSize(result.riskSummary, 170);
+    doc.text(summaryLines, 20, y);
+    y += (summaryLines.length * 6) + 10;
+
+    // Recommendation
+    doc.setFontSize(14);
+    doc.setTextColor(15, 23, 42);
+    doc.text("Recommendation", 20, y);
+    y += 8;
+    doc.setFontSize(11);
+    const recLines = doc.splitTextToSize(result.recommendation, 170);
+    doc.text(recLines, 20, y);
+    y += (recLines.length * 6) + 12;
+
+    // GP Summary Table-like
+    doc.setFontSize(14);
+    doc.text("Signals Summary for GP", 20, y);
+    y += 8;
+    doc.setFontSize(10);
+    doc.text(`Symptoms:`, 20, y);
+    const sympLines = doc.splitTextToSize(result.selectedSymptomLabels.join(", "), 130);
+    doc.text(sympLines, 50, y);
+    y += (sympLines.length * 5) + 2;
+    doc.text(`Severity:`, 20, y);
+    doc.text(result.severity, 50, y);
+    y += 6;
+    doc.text(`Duration:`, 20, y);
+    doc.text(result.duration || "Not specified", 50, y);
+    y += 15;
+
+    // Why
+    doc.setFontSize(12);
+    doc.text("Why this recommendation?", 20, y);
+    y += 8;
+    doc.setFontSize(10);
+    result.why.forEach(line => {
+      const wrappedLine = doc.splitTextToSize(`- ${line}`, 170);
+      doc.text(wrappedLine, 20, y);
+      y += (wrappedLine.length * 5);
+    });
+    y += 10;
+
+    // Questions
+    doc.setFontSize(12);
+    doc.text("Questions to ask your GP", 20, y);
+    y += 8;
+    doc.setFontSize(10);
+    result.gpQuestions.forEach(q => {
+      const wrappedQ = doc.splitTextToSize(`- ${q}`, 170);
+      doc.text(wrappedQ, 20, y);
+      y += (wrappedQ.length * 5);
+    });
+    y += 20;
+
+    // Footer Disclaimer
+    doc.setFontSize(9);
+    doc.setTextColor(153, 27, 27); // Dark red
+    doc.text("DISCLAIMER: This is not a medical diagnosis.", 20, y);
+    y += 5;
+    doc.setTextColor(100, 116, 139);
+    doc.text("If symptoms are severe or worsening, seek professional medical advice immediately.", 20, y);
+
+    doc.save("kashf-report.pdf");
+  };
+
   return (
     <div style={styles.container}>
       <h2 style={styles.title}>Your Assessment Report</h2>
@@ -97,9 +189,15 @@ export default function ResultsDashboard({ result, onStartAgain }: Props) {
         </p>
       </div>
 
-      <button style={styles.button} onClick={onStartAgain}>
-        Start another check
-      </button>
+      {/* 8. Actions */}
+      <div style={styles.actionGroup}>
+        <button style={styles.secondaryButton} onClick={downloadPDF}>
+          Download PDF Report ↓
+        </button>
+        <button style={styles.button} onClick={onStartAgain}>
+          Start another check
+        </button>
+      </div>
     </div>
   );
 }
@@ -236,5 +334,25 @@ const styles = {
     cursor: "pointer",
     boxShadow: "0 10px 20px rgba(15, 23, 42, 0.2)",
     transition: 'all 0.2s',
+  },
+  actionGroup: {
+    display: 'flex',
+    flexDirection: 'column' as const,
+    gap: '12px',
+    alignItems: 'center',
+    marginTop: '20px',
+  },
+  secondaryButton: {
+    padding: "12px 24px",
+    borderRadius: "12px",
+    border: "1.5px solid #0F172A",
+    backgroundColor: "transparent",
+    color: "#0F172A",
+    fontSize: "15px",
+    fontWeight: "600",
+    cursor: "pointer",
+    transition: 'all 0.2s',
+    width: '100%',
+    maxWidth: '320px',
   },
 };

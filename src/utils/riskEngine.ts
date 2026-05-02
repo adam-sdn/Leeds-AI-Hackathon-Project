@@ -1,4 +1,5 @@
-import { symptoms, Category } from "../data/symptoms";
+import { symptoms } from "../data/symptoms";
+import type { Category } from "../data/symptoms";
 
 export type Severity = "mild" | "moderate" | "severe";
 export type RiskLevel = "low" | "moderate" | "urgent";
