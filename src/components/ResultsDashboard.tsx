@@ -8,30 +8,35 @@ type Props = {
   result: AnalysisResult;
   scanResult?: FaceScanResult | null;
   onStartAgain: () => void;
+  onRescanFace?: () => void;
 };
 
-const ImpactMetric = ({ label, level }: { label: string; level: 'Low' | 'Moderate' | 'High' }) => {
-  const bars = { Low: 1, Moderate: 2, High: 3 };
-  const colors = { Low: '#22C55E', Moderate: '#F59E0B', High: '#EF4444' };
-  
-  return (
-    <div style={styles.metricRow}>
-      <span style={styles.metricLabel}>{label}</span>
-      <div style={styles.metricBarContainer}>
-        {[1, 2, 3].map(i => (
-          <div key={i} style={{
-            ...styles.metricBar,
-            backgroundColor: i <= bars[level] ? colors[level] : '#E2E8F0'
-          }} />
-        ))}
-      </div>
-      <span style={{...styles.metricValue, color: colors[level]}}>{level}</span>
-    </div>
-  );
+const getImpactData = (riskLevel: string) => {
+  switch(riskLevel) {
+    case 'low':
+      return {
+        actNow: ['Likely self-care or pharmacist advice', 'Minimal disruption'],
+        delayed: ['Symptoms may persist slightly longer', 'Still low risk'],
+        impact: { time: 'Minimal', complexity: 'Low' }
+      };
+    case 'urgent':
+      return {
+        actNow: ['Immediate urgent care (A&E or 999)', 'Faster intervention'],
+        delayed: ['Increased risk of complications', 'Higher stress and longer recovery'],
+        impact: { time: 'High', complexity: 'High' }
+      };
+    case 'moderate':
+    default:
+      return {
+        actNow: ['Likely GP consultation', 'Lower disruption and faster reassurance'],
+        delayed: ['Possible escalation to urgent care', 'Increased stress and waiting time'],
+        impact: { time: '1–2 days', complexity: 'Moderate' }
+      };
+  }
 };
 
-export default function ResultsDashboard({ result, scanResult, onStartAgain }: Props) {
-  const impactLevel = result.riskLevel === 'urgent' ? 'High' : result.riskLevel === 'moderate' ? 'Moderate' : 'Low';
+export default function ResultsDashboard({ result, scanResult, onStartAgain, onRescanFace }: Props) {
+  const impactData = getImpactData(result.riskLevel);
 
   const downloadPDF = () => {
     const doc = new jsPDF();
@@ -133,18 +138,35 @@ export default function ResultsDashboard({ result, scanResult, onStartAgain }: P
     y += 8;
 
     // 3.5 Care Impact Overview
-    ensureSpace(20);
+    ensureSpace(30);
     doc.setFont("helvetica", "bold");
     doc.setFontSize(15);
     doc.setTextColor(15, 23, 42);
     doc.text("Care Impact Overview", margin, y);
     y += 8;
 
-    doc.setFont("helvetica", "normal");
+    doc.setFont("helvetica", "bold");
     doc.setFontSize(11);
-    addBullet(`Time Impact: ${impactLevel}`);
-    addBullet(`Disruption: ${impactLevel}`);
-    addBullet(`Urgency Risk: ${impactLevel}`);
+    doc.text("If you act now:", margin, y);
+    y += 6;
+    doc.setFont("helvetica", "normal");
+    impactData.actNow.forEach(item => { addBullet(item); y += 2; });
+    
+    y += 2;
+    doc.setFont("helvetica", "bold");
+    doc.text("If delayed:", margin, y);
+    y += 6;
+    doc.setFont("helvetica", "normal");
+    impactData.delayed.forEach(item => { addBullet(item); y += 2; });
+
+    y += 2;
+    doc.setFont("helvetica", "bold");
+    doc.text("Estimated impact:", margin, y);
+    y += 6;
+    doc.setFont("helvetica", "normal");
+    addBullet(`Time disruption: ${impactData.impact.time}`);
+    y += 2;
+    addBullet(`Care complexity: ${impactData.impact.complexity}`);
     y += 6;
 
     // 3.6 What this could mean for you (Explanation)
@@ -210,6 +232,10 @@ export default function ResultsDashboard({ result, scanResult, onStartAgain }: P
       addBullet(line);
       y += 2;
     });
+    if (scanResult && scanResult.observations.length > 0) {
+      addBullet("Some facial wellness signals were noted that may be worth discussing with a clinician.");
+      y += 2;
+    }
     y += 8;
 
     // 6. Questions for your GP
@@ -233,15 +259,29 @@ export default function ResultsDashboard({ result, scanResult, onStartAgain }: P
       doc.setFont("helvetica", "bold");
       doc.setFontSize(15);
       doc.text("Facial Wellness Observations", margin, y);
+      
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.setTextColor(100, 116, 139);
+      doc.text(`Quality: ${scanResult.scanQuality}`, pageWidth - margin - 25, y);
+      doc.setTextColor(15, 23, 42); // Reset to navy
       y += 8;
 
-      doc.setFont("helvetica", "normal");
       doc.setFontSize(11);
       scanResult.observations.forEach(obs => {
         addBullet(obs.label);
         y += 2;
       });
-      y += 8;
+      y += 4;
+      
+      doc.setFont("helvetica", "italic");
+      doc.setFontSize(9);
+      doc.setTextColor(100, 116, 139);
+      const disclaimer = "Facial scan observations are based on visible wellness signals only. They are included to help you describe changes, not to diagnose a condition.";
+      addWrappedText(disclaimer, margin, contentWidth, 4);
+      doc.setTextColor(15, 23, 42); // Reset to navy
+      doc.setFont("helvetica", "normal");
+      y += 4;
     }
 
     // 7. Safety Guidance
@@ -288,26 +328,42 @@ export default function ResultsDashboard({ result, scanResult, onStartAgain }: P
           Understanding the real-world impact of your care timeline.
         </p>
         
-        <div style={styles.metricsContainer}>
-          <ImpactMetric label="Time Impact" level={impactLevel} />
-          <ImpactMetric label="Disruption" level={impactLevel} />
-          <ImpactMetric label="Urgency Risk" level={impactLevel} />
-        </div>
-
         <div style={styles.comparisonGrid}>
           <div style={styles.comparisonColumn}>
             <span style={{...styles.comparisonTitle, color: '#15803D', background: '#DCFCE7'}}>If you act now</span>
             <ul style={styles.list}>
-              <li style={{...styles.listItem, fontSize: '13px'}}>Routine GP visit likely</li>
-              <li style={{...styles.listItem, fontSize: '13px'}}>Lower life disruption</li>
+              {impactData.actNow.map((item, i) => (
+                <li key={i} style={{...styles.listItem, fontSize: '13px'}}>{item}</li>
+              ))}
             </ul>
           </div>
           <div style={styles.comparisonColumn}>
             <span style={{...styles.comparisonTitle, color: '#B91C1C', background: '#FEE2E2'}}>If delayed</span>
             <ul style={styles.list}>
-              <li style={{...styles.listItem, fontSize: '13px'}}>Possible urgent care</li>
-              <li style={{...styles.listItem, fontSize: '13px'}}>Higher stress & waiting</li>
+              {impactData.delayed.map((item, i) => (
+                <li key={i} style={{...styles.listItem, fontSize: '13px'}}>{item}</li>
+              ))}
             </ul>
+          </div>
+        </div>
+
+        <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid #E2E8F0' }}>
+          <h4 style={{ margin: '0 0 12px 0', fontSize: '14px', color: '#0F172A' }}>Estimated impact</h4>
+          <div style={{ display: 'flex', gap: '24px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+              <div>
+                <div style={{ fontSize: '12px', color: '#64748B' }}>Time disruption</div>
+                <div style={{ fontSize: '14px', color: '#0F172A', fontWeight: 500 }}>{impactData.impact.time}</div>
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+              <div>
+                <div style={{ fontSize: '12px', color: '#64748B' }}>Care complexity</div>
+                <div style={{ fontSize: '14px', color: '#0F172A', fontWeight: 500 }}>{impactData.impact.complexity}</div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -319,6 +375,11 @@ export default function ResultsDashboard({ result, scanResult, onStartAgain }: P
           {result.why.map((item, index) => (
             <li key={index} style={styles.listItem}>{item}</li>
           ))}
+          {scanResult && scanResult.observations.length > 0 && (
+            <li style={styles.listItem}>
+              Some facial wellness signals were noted that may be worth discussing with a clinician.
+            </li>
+          )}
         </ul>
       </div>
 
@@ -374,15 +435,26 @@ export default function ResultsDashboard({ result, scanResult, onStartAgain }: P
       {/* 6.5 Facial Wellness Observations */}
       {scanResult && scanResult.observations.length > 0 && (
         <div style={styles.card}>
-          <h3 style={{...styles.cardTitle, color: '#2F6FED'}}>Facial wellness observations</h3>
-          <ul style={styles.list}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+            <h3 style={{...styles.cardTitle, color: '#2F6FED', margin: 0}}>Facial wellness observations</h3>
+            <span style={{ fontSize: '12px', fontWeight: 600, padding: '4px 8px', borderRadius: '4px', backgroundColor: '#F1F5F9', color: '#475569' }}>
+              Quality: {scanResult.scanQuality}
+            </span>
+          </div>
+          <p style={{fontSize: '14px', color: '#334155', marginBottom: '12px', marginTop: 0}}>
+            Kashf noticed the following visible wellness signals:
+          </p>
+          <ul style={{...styles.list, marginTop: 0}}>
             {scanResult.observations.map((obs, index) => (
               <li key={index} style={{...styles.listItem, color: '#0F172A', fontWeight: 500}}>{obs.label}</li>
             ))}
           </ul>
+          <p style={{fontSize: '14px', color: '#334155', marginTop: '12px', marginBottom: 0}}>
+            These may help you describe your symptoms more clearly when speaking to a GP.
+          </p>
           <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #E2E8F0' }}>
-            <p style={{fontSize: '13px', color: '#64748B', fontStyle: 'italic', margin: 0}}>
-              Facial scan observations are visible wellness signals only and are not a medical diagnosis.
+            <p style={{fontSize: '13px', color: '#64748B', margin: 0}}>
+              Facial scan observations are based on visible wellness signals only. They are included to help you describe changes, not to diagnose a condition.
             </p>
           </div>
         </div>
@@ -400,13 +472,31 @@ export default function ResultsDashboard({ result, scanResult, onStartAgain }: P
       </div>
 
       {/* 8. Actions */}
-      <div style={styles.actionGroup}>
-        <button style={styles.secondaryButton} onClick={downloadPDF}>
-          Download PDF Report ↓
-        </button>
-        <button style={styles.button} onClick={onStartAgain}>
-          Start another check
-        </button>
+      <div style={{ display: 'flex', gap: '12px', flexDirection: 'column' }}>
+        <div style={styles.actionGroup}>
+          <button style={styles.secondaryButton} onClick={downloadPDF}>
+            Download PDF Report ↓
+          </button>
+          <button style={styles.button} onClick={onStartAgain}>
+            Start another check
+          </button>
+        </div>
+        {onRescanFace && (
+          <button 
+            style={{
+              ...styles.secondaryButton, 
+              alignSelf: 'center', 
+              background: 'transparent', 
+              border: '1px solid #CBD5E1', 
+              color: '#475569',
+              padding: '10px 24px',
+              marginTop: '4px'
+            }} 
+            onClick={onRescanFace}
+          >
+            Rescan Face
+          </button>
+        )}
       </div>
     </div>
   );

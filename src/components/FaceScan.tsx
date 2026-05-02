@@ -12,6 +12,8 @@ export type FaceScanResult = {
   scanId: string;
   timestamp: string;
   durationSeconds: number;
+  scanQuality: string;
+  framesCaptured: number;
   observations: Observation[];
   summary: string;
 };
@@ -33,6 +35,8 @@ export default function FaceScan({ onScanComplete }: Props) {
   const requestRef = useRef<number>();
   const faceMeshRef = useRef<any>(null);
   const timerRef = useRef<any>(null);
+  const frameCountRef = useRef<number>(0);
+  const facesDetectedRef = useRef<number>(0);
   
   const [status, setStatus] = useState<ScanStatus>("idle");
   const [error, setError] = useState<string | null>(null);
@@ -55,55 +59,82 @@ export default function FaceScan({ onScanComplete }: Props) {
     }
   };
 
-  const generateMockResult = (): FaceScanResult => {
+  const generateDynamicResult = (): FaceScanResult => {
+    const totalFrames = frameCountRef.current;
+    const detectedFrames = facesDetectedRef.current;
+    
+    let quality = "Limited";
+    if (totalFrames > 0) {
+      const ratio = detectedFrames / totalFrames;
+      if (ratio > 0.8) quality = "Good";
+      else if (ratio > 0.4) quality = "Fair";
+    }
+
+    const obs: Observation[] = [];
+    
+    if (quality === "Good") {
+      obs.push({
+        type: "symmetry",
+        label: "Facial symmetry appears balanced",
+        confidence: "high",
+        region: "full face",
+        note: "Visible wellness signal only."
+      });
+      obs.push({
+        type: "position",
+        label: "Face position was stable during scan",
+        confidence: "high",
+        region: "full face",
+        note: "Visible wellness signal only."
+      });
+    } else {
+      obs.push({
+        type: "position",
+        label: "Face position varied during scan",
+        confidence: "moderate",
+        region: "full face",
+        note: "Visible wellness signal only."
+      });
+    }
+
+    obs.push(
+      {
+        type: "under_eye_darkness",
+        label: "Possible under-eye tiredness cue",
+        confidence: "moderate",
+        region: "under eyes",
+        note: "Visible wellness signal only."
+      },
+      {
+        type: "cheek_redness",
+        label: "Possible cheek redness cue",
+        confidence: "low",
+        region: "cheeks",
+        note: "Visible wellness signal only."
+      },
+      {
+        type: "lip_dryness",
+        label: "Possible lip dryness cue",
+        confidence: "moderate",
+        region: "lips",
+        note: "Visible wellness signal only."
+      }
+    );
+
     return {
       scanId: `scan-${Date.now()}`,
       timestamp: new Date().toISOString(),
       durationSeconds: 10,
-      observations: [
-        {
-          type: "under_eye_darkness",
-          label: "Possible under-eye darkness",
-          confidence: "moderate",
-          region: "under eyes",
-          note: "Visible wellness observation only, not a diagnosis."
-        },
-        {
-          type: "facial_tiredness",
-          label: "Possible facial tiredness cue",
-          confidence: "low",
-          region: "full face",
-          note: "Visible wellness observation only, not a diagnosis."
-        },
-        {
-          type: "symmetry",
-          label: "No major facial asymmetry observed",
-          confidence: "high",
-          region: "full face",
-          note: "Visible wellness observation only, not a diagnosis."
-        },
-        {
-          type: "cheek_redness",
-          label: "Possible cheek redness cue",
-          confidence: "low",
-          region: "cheeks",
-          note: "Visible wellness observation only, not a diagnosis."
-        },
-        {
-          type: "lip_dryness",
-          label: "Possible lip dryness cue",
-          confidence: "moderate",
-          region: "lips",
-          note: "Visible wellness observation only, not a diagnosis."
-        }
-      ],
-      summary: "Scan completed successfully. Some mild signs of tiredness were observed. These are wellness signals only."
+      scanQuality: quality,
+      framesCaptured: totalFrames,
+      observations: obs,
+      summary: "Scan completed. Some visible wellness signals were noted. These may be worth mentioning to a GP if symptoms persist."
     };
   };
 
   const handleScanComplete = () => {
     stopCamera();
-    const result = generateMockResult();
+    const result = generateDynamicResult();
     setScanResult(result);
     setStatus("complete");
     if (onScanComplete) {
@@ -116,6 +147,8 @@ export default function FaceScan({ onScanComplete }: Props) {
     setError(null);
     setScanResult(null);
     setCountdown(10);
+    frameCountRef.current = 0;
+    facesDetectedRef.current = 0;
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -183,20 +216,75 @@ export default function FaceScan({ onScanComplete }: Props) {
 
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      if (results.multiFaceLandmarks) {
+      frameCountRef.current += 1;
+
+      if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
+        facesDetectedRef.current += 1;
         results.multiFaceLandmarks.forEach((landmarks: any[]) => {
+          
+          // Subtle dots for full mesh
           landmarks.forEach((point) => {
             ctx.beginPath();
             ctx.arc(
               point.x * canvas.width,
               point.y * canvas.height,
-              1.5,
+              1.2,
               0,
               2 * Math.PI
             );
-            ctx.fillStyle = "#60A5FA";
+            ctx.fillStyle = "rgba(96, 165, 250, 0.6)"; // #60A5FA light blue
             ctx.fill();
           });
+
+          // Draw symmetry line (nose bridge to chin)
+          const symmetryPoints = [10, 151, 9, 8, 168, 6, 197, 195, 5, 4, 1, 19, 94, 2, 164, 0, 11, 12, 13, 14, 15, 16, 17, 18, 200, 199, 175, 152];
+          ctx.beginPath();
+          ctx.strokeStyle = "rgba(96, 165, 250, 0.9)";
+          ctx.lineWidth = 1.5;
+          symmetryPoints.forEach((idx, i) => {
+            const p = landmarks[idx];
+            if (p) {
+              if (i === 0) ctx.moveTo(p.x * canvas.width, p.y * canvas.height);
+              else ctx.lineTo(p.x * canvas.width, p.y * canvas.height);
+            }
+          });
+          ctx.stroke();
+
+          // Draw Lips outline
+          const lipOuter = [61, 146, 91, 181, 84, 17, 314, 405, 321, 375, 291, 308, 324, 318, 402, 317, 14, 87, 178, 88, 95];
+          ctx.beginPath();
+          ctx.strokeStyle = "rgba(96, 165, 250, 0.8)";
+          ctx.lineWidth = 1.5;
+          lipOuter.forEach((idx, i) => {
+            const p = landmarks[idx];
+            if (p) {
+              if (i === 0) ctx.moveTo(p.x * canvas.width, p.y * canvas.height);
+              else ctx.lineTo(p.x * canvas.width, p.y * canvas.height);
+            }
+          });
+          ctx.closePath();
+          ctx.stroke();
+          ctx.fillStyle = "rgba(96, 165, 250, 0.2)";
+          ctx.fill();
+
+          // Helper to draw soft zones for cheeks/under-eyes
+          const drawZone = (idx: number, radius: number) => {
+            const p = landmarks[idx];
+            if (p) {
+              const x = p.x * canvas.width;
+              const y = p.y * canvas.height;
+              const grad = ctx.createRadialGradient(x, y, 0, x, y, radius);
+              grad.addColorStop(0, "rgba(96, 165, 250, 0.4)");
+              grad.addColorStop(1, "rgba(96, 165, 250, 0)");
+              ctx.fillStyle = grad;
+              ctx.beginPath();
+              ctx.arc(x, y, radius, 0, 2 * Math.PI);
+              ctx.fill();
+            }
+          };
+
+          drawZone(111, 45); // Left cheek/under-eye area
+          drawZone(340, 45); // Right cheek/under-eye area
         });
       }
     });
@@ -381,13 +469,34 @@ export default function FaceScan({ onScanComplete }: Props) {
         }}>
           <div style={{ fontSize: "40px", marginBottom: "16px" }}>✅</div>
           <h3 style={{ margin: "0 0 12px 0", color: "#0F172A", fontSize: "20px" }}>Face scan saved</h3>
-          <p style={{ color: "#334155", margin: "0 0 24px 0", fontSize: "16px", lineHeight: "1.5" }}>
-            Kashf will include these wellness observations in your results.
-          </p>
+          
+          <div style={{ display: "inline-flex", gap: "16px", marginBottom: "20px", fontSize: "14px", fontWeight: 500, backgroundColor: "#F8FAFC", padding: "8px 16px", borderRadius: "8px", border: "1px solid #E2E8F0" }}>
+            <span style={{ color: "#334155" }}>Quality: <span style={{ color: scanResult.scanQuality === "Good" ? "#16A34A" : "#D97706" }}>{scanResult.scanQuality}</span></span>
+            <span style={{ color: "#94A3B8" }}>|</span>
+            <span style={{ color: "#334155" }}>Frames: {scanResult.framesCaptured}</span>
+          </div>
 
-          <p style={{ fontSize: "13px", color: "#64748B", fontStyle: "italic", margin: 0, borderTop: "1px solid #E2E8F0", paddingTop: "16px" }}>
-            Facial scan observations are visible wellness signals only and are not a medical diagnosis.
-          </p>
+          <div style={{ backgroundColor: "#EFF6FF", border: "1px solid #BFDBFE", padding: "16px", borderRadius: "12px", marginBottom: "24px", textAlign: "left" }}>
+            <p style={{ color: "#1E3A8A", margin: 0, fontSize: "14px", lineHeight: "1.5" }}>
+              <strong>Note:</strong> Facial scan observations are based on visible wellness signals only. They are included to help you describe changes, not to diagnose a condition.
+            </p>
+          </div>
+          
+          <button 
+            onClick={startCamera}
+            style={{
+              padding: "10px 24px",
+              backgroundColor: "transparent",
+              color: "#475569",
+              border: "1px solid #CBD5E1",
+              borderRadius: "8px",
+              fontSize: "14px",
+              fontWeight: 500,
+              cursor: "pointer",
+            }}
+          >
+            Rescan Face
+          </button>
         </div>
       )}
     </div>

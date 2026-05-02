@@ -80,6 +80,7 @@ function App() {
                 result={result} 
                 scanResult={scanResult} 
                 onStartAgain={handleReset} 
+                onRescanFace={() => setView('scan')}
               />
             )}
           </div>
