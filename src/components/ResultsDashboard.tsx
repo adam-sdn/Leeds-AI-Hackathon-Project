@@ -36,8 +36,52 @@ const getImpactData = (riskLevel: string) => {
   }
 };
 
+const getHealthStatus = (label: string, value: string | number) => {
+  const val = typeof value === 'string' ? parseFloat(value) : value;
+  
+  if (label === 'Heart Rate') {
+    if (val > 100) return { color: '#EF4444', text: 'Elevated' };
+    if (val >= 60 && val <= 80) return { color: '#22C55E', text: 'Normal range' };
+  }
+  if (label === 'Sleep') {
+    if (val < 6) return { color: '#F59E0B', text: 'Below recommended' };
+    if (val >= 7 && val <= 9) return { color: '#22C55E', text: 'Good' };
+  }
+  if (label === 'Recovery') {
+    if (val < 40) return { color: '#EF4444', text: 'Low' };
+    if (val >= 40 && val < 70) return { color: '#F59E0B', text: 'Moderate' };
+    if (val >= 70) return { color: '#22C55E', text: 'High' };
+  }
+  if (label === 'HRV') {
+    if (val < 40) return { color: '#F59E0B', text: 'Worth monitoring' };
+  }
+  if (label === 'Steps') {
+    const sVal = typeof value === 'string' ? parseInt(value.replace(',', '')) : value;
+    if (sVal >= 8000) return { color: '#22C55E', text: 'Active day' };
+    if (sVal < 5000) return { color: '#F59E0B', text: 'Low movement today' };
+  }
+  return null;
+};
+
 export default function ResultsDashboard({ result, scanResult, healthData, onStartAgain, onRescanFace }: Props) {
   const impactData = getImpactData(result.riskLevel);
+
+  const getAIInsight = () => {
+    if (!healthData?.metrics) return null;
+    const recovery = parseFloat(healthData.metrics.recovery);
+    const rhr = parseFloat(healthData.metrics.heartRate);
+    const hasFatigue = result.selectedSymptomLabels.some(s => s.toLowerCase().includes('fatigue') || s.toLowerCase().includes('tired'));
+    
+    if (recovery < 50 && hasFatigue) {
+      return "Your recovery is below average and combined with reported fatigue, rest is strongly advised.";
+    }
+    if (rhr > 100) {
+      return "Your resting heart rate is currently elevated; try to minimize physical exertion until you speak with a professional.";
+    }
+    return "Your health metrics provide additional context for your symptoms; be sure to share these with your GP.";
+  };
+
+  const aiInsight = getAIInsight();
 
   const downloadPDF = () => {
     const doc = new jsPDF();
@@ -353,6 +397,83 @@ export default function ResultsDashboard({ result, scanResult, healthData, onSta
         <p style={styles.summaryText}>{result.riskSummary}</p>
       </div>
 
+      {/* 1.5 Your Health Signals */}
+      {healthData && healthData.metrics && (
+        <div style={styles.card}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <h3 style={{...styles.cardTitle, margin: 0}}>Your Health Signals</h3>
+            <span style={{ fontSize: '11px', fontWeight: 700, padding: '4px 10px', borderRadius: '20px', backgroundColor: '#F1F5F9', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              via {healthData.brand}
+            </span>
+          </div>
+          
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px', marginBottom: '24px' }}>
+            <HealthMetricCard 
+              icon="❤️" 
+              label="Heart Rate" 
+              value={`${healthData.metrics.heartRate}`} 
+              status={getHealthStatus('Heart Rate', healthData.metrics.heartRate)} 
+            />
+            <HealthMetricCard 
+              icon="😴" 
+              label="Sleep" 
+              value={`${healthData.metrics.sleep}`} 
+              status={getHealthStatus('Sleep', healthData.metrics.sleep)} 
+            />
+            <div style={{...styles.healthMetricCard, gridColumn: 'span 2'}}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '20px' }}>⚡</span>
+                  <span style={styles.healthMetricLabel}>Recovery</span>
+                </div>
+                <span style={styles.healthMetricValue}>{healthData.metrics.recovery}</span>
+              </div>
+              <div style={{ height: '6px', backgroundColor: '#E2E8F0', borderRadius: '3px', overflow: 'hidden' }}>
+                <div style={{ 
+                  height: '100%', 
+                  width: healthData.metrics.recovery, 
+                  backgroundColor: getHealthStatus('Recovery', healthData.metrics.recovery)?.color || '#2F6FED',
+                  transition: 'width 1s ease-out'
+                }} />
+              </div>
+              {getHealthStatus('Recovery', healthData.metrics.recovery) && (
+                <div style={{ fontSize: '11px', color: getHealthStatus('Recovery', healthData.metrics.recovery)?.color, fontWeight: 600, marginTop: '6px' }}>
+                  {getHealthStatus('Recovery', healthData.metrics.recovery)?.text} readiness
+                </div>
+              )}
+            </div>
+            <HealthMetricCard 
+              icon="🏃" 
+              label="Activity" 
+              value={healthData.metrics.activity} 
+              badge={true}
+            />
+            <HealthMetricCard 
+              icon="📊" 
+              label="HRV" 
+              value={healthData.metrics.hrv} 
+              status={getHealthStatus('HRV', healthData.metrics.hrv)}
+              sub="Heart Rate Variability"
+            />
+            <HealthMetricCard 
+              icon="👟" 
+              label="Steps" 
+              value={healthData.metrics.steps} 
+              status={getHealthStatus('Steps', healthData.metrics.steps)}
+            />
+          </div>
+
+          {aiInsight && (
+            <div style={{ padding: '16px', backgroundColor: '#F0F9FF', borderRadius: '12px', borderLeft: '4px solid #0EA5E9', display: 'flex', gap: '12px', alignItems: 'center' }}>
+              <span style={{ fontSize: '18px' }}>💡</span>
+              <p style={{ fontSize: '13px', color: '#0369A1', margin: 0, lineHeight: '1.5', fontWeight: 500 }}>
+                {aiInsight}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* 2. Recommended Next Step */}
       <div style={styles.card}>
         <h3 style={styles.cardTitle}>Recommended Next Step</h3>
@@ -507,43 +628,7 @@ export default function ResultsDashboard({ result, scanResult, healthData, onSta
         </div>
       )}
 
-      {/* 6.7 Connected Health Data */}
-      {healthData && healthData.metrics && (
-        <div style={styles.card}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
-            <h3 style={{...styles.cardTitle, color: '#2F6FED', margin: 0}}>Connected health metrics</h3>
-            <span style={{ fontSize: '12px', fontWeight: 600, padding: '4px 8px', borderRadius: '4px', backgroundColor: '#F1F5F9', color: '#475569' }}>
-              Source: {healthData.brand.charAt(0).toUpperCase() + healthData.brand.slice(1)}
-            </span>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
-            <div style={styles.healthMetricItem}>
-              <span style={styles.healthMetricLabel}>Heart Rate</span>
-              <span style={styles.healthMetricValue}>{healthData.metrics.heartRate}</span>
-            </div>
-            <div style={styles.healthMetricItem}>
-              <span style={styles.healthMetricLabel}>Sleep</span>
-              <span style={styles.healthMetricValue}>{healthData.metrics.sleep}</span>
-            </div>
-            <div style={styles.healthMetricItem}>
-              <span style={styles.healthMetricLabel}>Activity</span>
-              <span style={styles.healthMetricValue}>{healthData.metrics.activity}</span>
-            </div>
-            <div style={styles.healthMetricItem}>
-              <span style={styles.healthMetricLabel}>Recovery</span>
-              <span style={styles.healthMetricValue}>{healthData.metrics.recovery}</span>
-            </div>
-            <div style={styles.healthMetricItem}>
-              <span style={styles.healthMetricLabel}>HRV</span>
-              <span style={styles.healthMetricValue}>{healthData.metrics.hrv}</span>
-            </div>
-            <div style={styles.healthMetricItem}>
-              <span style={styles.healthMetricLabel}>Steps</span>
-              <span style={styles.healthMetricValue}>{healthData.metrics.steps}</span>
-            </div>
-          </div>
-        </div>
-      )}
+
 
       {/* 7. Safety Guidance */}
       <div style={styles.safetyCard}>
