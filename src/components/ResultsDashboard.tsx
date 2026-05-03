@@ -5,11 +5,17 @@ import type { AnalysisResult } from "../utils/riskEngine";
 import type { FaceScanResult } from "./FaceScan";
 import { generateTailoredInsight } from "../utils/aiReasoningEngine";
 import type { TailoredInsight } from "../utils/aiReasoningEngine";
+import ResultsChatAssistant from "./ResultsChatAssistant";
+import type { ConnectedHealthData } from "../types/health";
+import type { AppLanguage } from "../types/language";
+import { languageLabels } from "../types/language";
+import { translateText } from "../utils/translation";
 
 type Props = {
   result: AnalysisResult;
   scanResult?: FaceScanResult | null;
-  healthData?: any | null;
+  healthData?: ConnectedHealthData | null;
+  language: AppLanguage;
   onStartAgain: () => void;
   onRescanFace?: () => void;
 };
@@ -36,6 +42,11 @@ const getImpactData = (riskLevel: string) => {
         impact: { time: '1–2 days', complexity: 'Moderate', escalation: 'Moderate' }
       };
   }
+};
+
+type HealthStatus = {
+  color: string;
+  text: string;
 };
 
 const getHealthStatus = (label: string, value: string | number) => {
@@ -65,7 +76,7 @@ const getHealthStatus = (label: string, value: string | number) => {
   return null;
 };
 
-export default function ResultsDashboard({ result, scanResult, healthData, onStartAgain, onRescanFace }: Props) {
+export default function ResultsDashboard({ result, scanResult, healthData, language, onStartAgain, onRescanFace }: Props) {
   const impactData = getImpactData(result.riskLevel);
   const [tailoredInsight, setTailoredInsight] = useState<TailoredInsight | null>(null);
   const [isLoadingAI, setIsLoadingAI] = useState(true);
@@ -106,7 +117,7 @@ export default function ResultsDashboard({ result, scanResult, healthData, onSta
 
   const aiInsight = getAIInsight();
 
-  const downloadPDF = () => {
+  const downloadPDF = (includeTranslation = false) => {
     const doc = new jsPDF();
     const margin = 15;
     const pageWidth = 210;
@@ -145,6 +156,23 @@ export default function ResultsDashboard({ result, scanResult, healthData, onSta
       doc.text("•", bulletX, y);
       doc.text(lines, textX, y);
       y += lines.length * bulletLineHeight;
+    };
+
+    const addTranslationBlock = (title: string, lines: string[]) => {
+      if (!includeTranslation || language === "en") return;
+      ensureSpace(30);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(15);
+      doc.setTextColor(15, 23, 42);
+      doc.text(`${title} (${languageLabels[language]})`, margin, y);
+      y += 8;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      lines.forEach((line) => {
+        addWrappedText(translateText(line, language), margin, contentWidth, 5);
+        y += 2;
+      });
+      y += 4;
     };
 
     doc.addImage(logo, "PNG", pageWidth - 55, 10, 40, 15);
@@ -191,6 +219,7 @@ export default function ResultsDashboard({ result, scanResult, healthData, onSta
     doc.setFontSize(11);
     addWrappedText(result.recommendation, margin, contentWidth);
     y += 8;
+    addTranslationBlock("Translated next step", [result.recommendation]);
 
     ensureSpace(30);
     doc.setFont("helvetica", "bold");
@@ -280,6 +309,7 @@ export default function ResultsDashboard({ result, scanResult, healthData, onSta
       y += 2;
     }
     y += 8;
+    addTranslationBlock("Translated reasoning", result.why);
 
     ensureSpace(15);
     doc.setFont("helvetica", "bold");
@@ -290,6 +320,7 @@ export default function ResultsDashboard({ result, scanResult, healthData, onSta
     doc.setFontSize(11);
     result.gpQuestions.forEach(q => { addBullet(q); y += 2; });
     y += 8;
+    addTranslationBlock("Translated GP questions", result.gpQuestions);
 
     if (scanResult && scanResult.observations.length > 0) {
       ensureSpace(15);
@@ -356,6 +387,10 @@ export default function ResultsDashboard({ result, scanResult, healthData, onSta
     doc.setFontSize(10);
     const safetyText = "This is not a medical diagnosis. If your symptoms are severe, seek medical advice.";
     addWrappedText(safetyText, margin, contentWidth, 5);
+    addTranslationBlock("Translated safety guidance", [
+      "This is not a medical diagnosis.",
+      "If symptoms are severe, sudden, worsening, or you are worried, seek medical advice.",
+    ]);
 
     if (tailoredInsight) {
       ensureSpace(30);
@@ -376,7 +411,7 @@ export default function ResultsDashboard({ result, scanResult, healthData, onSta
       y += 4;
     }
 
-    doc.save("kashf-report.pdf");
+    doc.save(includeTranslation && language !== "en" ? `kashf-report-${language}-translated.pdf` : "kashf-report.pdf");
   };
 
   return (
@@ -384,7 +419,7 @@ export default function ResultsDashboard({ result, scanResult, healthData, onSta
       <h2 style={styles.title}>Your Assessment Report</h2>
 
       {/* AI Reasoning Section */}
-      <div style={{ ...styles.card, background: 'linear-gradient(135deg, #F0F9FF 0%, #E0F2FE 100%)', border: '1px solid #BAE6FD' }}>
+      <div style={{ ...styles.card, background: 'linear-gradient(135deg, rgba(14, 165, 233, 0.14) 0%, rgba(37, 99, 235, 0.10) 100%)', border: '1px solid rgba(96, 165, 250, 0.32)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
           <div style={{ padding: '8px', backgroundColor: '#0EA5E9', borderRadius: '10px', color: 'white' }}>
             <span style={{ fontSize: '20px' }}>🤖</span>
@@ -409,7 +444,7 @@ export default function ResultsDashboard({ result, scanResult, healthData, onSta
               {tailoredInsight.clinicalNarrative}
             </p>
             
-            <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '16px', marginBottom: '20px' }}>
+            <div style={{ backgroundColor: 'var(--card)', borderRadius: '12px', padding: '16px', marginBottom: '20px', border: '1px solid var(--border)' }}>
               <h4 style={{ fontSize: '12px', color: '#0369A1', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '12px' }}>System Correlations</h4>
               <ul style={styles.list}>
                 {tailoredInsight.systemCorrelations.map((c, i) => (
@@ -501,16 +536,38 @@ export default function ResultsDashboard({ result, scanResult, healthData, onSta
       {/* 2. Recommended Next Step */}
       <div style={{ ...styles.card, borderLeft: `4px solid ${styles.colors[result.riskLevel]}` }}>
         <h3 style={styles.cardTitle}>Recommended next step</h3>
-        <p style={{ fontSize: '18px', fontWeight: '700', color: '#0F172A', marginBottom: '12px' }}>
+        <p style={{ fontSize: '18px', fontWeight: '760', color: 'var(--text)', marginBottom: '12px' }}>
           {tailoredInsight?.nextStep || result.recommendation}
         </p>
-        <p style={{ fontSize: '14px', color: '#64748B' }}>{result.explanation}</p>
+        <p style={{ fontSize: '14px', color: 'var(--muted)' }}>{result.explanation}</p>
       </div>
+
+      {result.nhsReferences.length > 0 && (
+        <div style={styles.card}>
+          <h3 style={styles.cardTitle}>NHS Symptoms A to Z references</h3>
+          <p style={{ fontSize: '13px', color: 'var(--muted)', margin: '10px 0 16px' }}>
+            Kashf matched your selected symptoms against the NHS A to Z index. Open these for deeper NHS guidance on causes, treatment and what to do.
+          </p>
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+            {result.nhsReferences.map((reference) => (
+              <a
+                key={reference.url}
+                href={reference.url}
+                target="_blank"
+                rel="noreferrer"
+                className="nhs-reference-pill"
+              >
+                {reference.label}
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* 3. Care Impact Dashboard */}
       <div style={styles.card}>
         <h3 style={styles.cardTitle}>Care Impact Dashboard</h3>
-        <p style={{ fontSize: '13px', color: '#64748B', marginBottom: '20px' }}>
+        <p style={{ fontSize: '13px', color: 'var(--muted)', marginBottom: '20px' }}>
           Understanding the difference between immediate and delayed action:
         </p>
         
@@ -533,8 +590,8 @@ export default function ResultsDashboard({ result, scanResult, healthData, onSta
           </div>
         </div>
 
-        <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid #E2E8F0' }}>
-          <h4 style={{ margin: '0 0 12px 0', fontSize: '14px', color: '#0F172A' }}>Estimated impact levels</h4>
+        <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid var(--border)' }}>
+          <h4 style={{ margin: '0 0 12px 0', fontSize: '14px', color: 'var(--text)' }}>Estimated impact levels</h4>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
             <ImpactMetric icon="clock" label="Time" value={impactData.impact.time} />
             <ImpactMetric icon="pulse" label="Care" value={impactData.impact.complexity} />
@@ -567,7 +624,7 @@ export default function ResultsDashboard({ result, scanResult, healthData, onSta
       </div>
 
       {/* 6. Summary for your GP */}
-      <div style={{...styles.card, background: '#F8FAFC'}}>
+      <div style={{...styles.card, background: 'var(--card-soft)'}}>
         <h3 style={styles.cardTitle}>Summary for your GP</h3>
         <div style={styles.gpSummaryGrid}>
           <GPItem label="Symptoms" value={result.selectedSymptomLabels.join(", ")} />
@@ -596,9 +653,9 @@ export default function ResultsDashboard({ result, scanResult, healthData, onSta
         <div style={{...styles.card, borderLeft: '4px solid #60A5FA'}}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
             <h3 style={styles.cardTitle}>Facial wellness observations</h3>
-            <span style={{fontSize: '12px', color: '#64748B', fontWeight: 600}}>Scan quality: {scanResult.scanQuality}</span>
+            <span style={{fontSize: '12px', color: 'var(--muted)', fontWeight: 650}}>Scan quality: {scanResult.scanQuality}</span>
           </div>
-          <p style={{fontSize: '14px', color: '#475569', marginBottom: '16px'}}>Kashf noticed the following visible wellness signals:</p>
+          <p style={{fontSize: '14px', color: 'var(--muted)', marginBottom: '16px'}}>Kashf noticed the following visible wellness signals:</p>
           <ul style={styles.list}>
             {scanResult.observations.map((obs, i) => <li key={i} style={styles.listItem}>{obs.label}</li>)}
           </ul>
@@ -614,7 +671,7 @@ export default function ResultsDashboard({ result, scanResult, healthData, onSta
             </div>
           )}
 
-          <p style={{fontSize: '13px', color: '#64748B', marginTop: '16px', fontStyle: 'italic'}}>These are visible wellness signals only and not a medical diagnosis.</p>
+          <p style={{fontSize: '13px', color: 'var(--muted)', marginTop: '16px', fontStyle: 'italic'}}>These are visible wellness signals only and not a medical diagnosis.</p>
         </div>
       )}
 
@@ -627,13 +684,26 @@ export default function ResultsDashboard({ result, scanResult, healthData, onSta
       {/* 10. Actions */}
       <div style={{ display: 'flex', gap: '12px', flexDirection: 'column' }}>
         <div style={styles.actionGroup}>
-          <button style={styles.secondaryButton} onClick={downloadPDF}>Download PDF Report ↓</button>
+          <button style={styles.secondaryButton} onClick={() => downloadPDF(false)}>Download English PDF Report ↓</button>
+          {language !== "en" && (
+            <button style={styles.secondaryButton} onClick={() => downloadPDF(true)}>
+              Download English + {languageLabels[language]} PDF ↓
+            </button>
+          )}
           <button style={styles.button} onClick={onStartAgain}>Start another check</button>
         </div>
         {onRescanFace && (
           <button style={styles.rescanButton} onClick={onRescanFace}>Rescan Face</button>
         )}
       </div>
+      <ResultsChatAssistant
+        key={`${result.riskLevel}-${result.severity}-${result.duration}-${result.selectedSymptomLabels.join("|")}`}
+        result={result}
+        scanResult={scanResult}
+        healthData={healthData}
+        language={language}
+        tailoredInsight={tailoredInsight}
+      />
     </div>
   );
 }
@@ -659,7 +729,7 @@ function GPItem({ label, value, isAlert }: { label: string; value: string; isAle
   );
 }
 
-function HealthMetricCard({ icon, label, value, status, badge, sub }: { icon: string; label: string; value: string; status?: any; badge?: boolean; sub?: string }) {
+function HealthMetricCard({ icon, label, value, status, badge, sub }: { icon: string; label: string; value: string; status?: HealthStatus | null; badge?: boolean; sub?: string }) {
   return (
     <div style={styles.healthMetricCard}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>

@@ -1,8 +1,40 @@
-import { useRef, useState, useEffect } from "react";
+import { useCallback, useRef, useState, useEffect } from "react";
 import { processFaceScanWithBrowserPod } from "../utils/browserpodFaceProcessor";
 import type { Observation, ProcessedFaceResult, RawScanData } from "../utils/browserpodFaceProcessor";
 
 export type { Observation, ProcessedFaceResult as FaceScanResult };
+
+type FaceMeshPoint = {
+  x: number;
+  y: number;
+  z?: number;
+};
+
+type FaceMeshResults = {
+  multiFaceLandmarks?: FaceMeshPoint[][];
+};
+
+type FaceMeshInstance = {
+  setOptions: (options: {
+    maxNumFaces: number;
+    refineLandmarks: boolean;
+    minDetectionConfidence: number;
+    minTrackingConfidence: number;
+  }) => void;
+  onResults: (callback: (results: FaceMeshResults) => void) => void;
+  send: (input: { image: HTMLVideoElement }) => Promise<void>;
+  close: () => void;
+};
+
+type FaceMeshConstructor = new (options: {
+  locateFile: (file: string) => string;
+}) => FaceMeshInstance;
+
+declare global {
+  interface Window {
+    FaceMesh?: FaceMeshConstructor;
+  }
+}
 
 type Props = {
   onScanComplete?: (result: ProcessedFaceResult) => void;
@@ -18,9 +50,9 @@ type ScanStatus =
 export default function FaceScan({ onScanComplete }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const requestRef = useRef<number>();
-  const faceMeshRef = useRef<any>(null);
-  const timerRef = useRef<any>(null);
+  const requestRef = useRef<number | null>(null);
+  const faceMeshRef = useRef<FaceMeshInstance | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const frameCountRef = useRef<number>(0);
   const facesDetectedRef = useRef<number>(0);
   
@@ -33,7 +65,7 @@ export default function FaceScan({ onScanComplete }: Props) {
   const stopCamera = () => {
     if (requestRef.current) {
       cancelAnimationFrame(requestRef.current);
-      requestRef.current = undefined;
+      requestRef.current = null;
     }
     if (timerRef.current) {
       clearInterval(timerRef.current);
@@ -76,30 +108,9 @@ export default function FaceScan({ onScanComplete }: Props) {
       else if (ratio > 0.4) quality = "Fair";
     }
 
-    // Initial observations (detected by local frontend logic)
-    const baseObservations: Observation[] = [
-      {
-        type: "under_eye_darkness",
-        label: "Possible under-eye tiredness cue",
-        confidence: "moderate",
-        region: "under eyes",
-        note: "Visible wellness signal only."
-      },
-      {
-        type: "lip_dryness",
-        label: "Possible lip dryness cue",
-        confidence: "moderate",
-        region: "lips",
-        note: "Visible wellness signal only."
-      },
-      {
-        type: "cheek_redness",
-        label: "Possible cheek redness cue",
-        confidence: "low",
-        region: "cheeks",
-        note: "Visible wellness signal only."
-      }
-    ];
+    // Initial observations from local frontend logic. Keep these cautious:
+    // visible wellness signals are supporting context, never a health verdict.
+    const baseObservations: Observation[] = [];
 
     if (quality === "Good") {
       baseObservations.push({
@@ -108,6 +119,14 @@ export default function FaceScan({ onScanComplete }: Props) {
         confidence: "high",
         region: "full face",
         note: "Visible wellness signal only."
+      });
+    } else {
+      baseObservations.push({
+        type: "limited_face_detection",
+        label: "Limited facial signal quality",
+        confidence: "moderate",
+        region: "full face",
+        note: "Lighting, camera angle, or face visibility limited the scan. Do not treat this as reassuring."
       });
     }
 
@@ -158,7 +177,9 @@ export default function FaceScan({ onScanComplete }: Props) {
         timerRef.current = setInterval(() => {
           setCountdown((prev) => {
             if (prev <= 1) {
-              clearInterval(timerRef.current);
+              if (timerRef.current) {
+                clearInterval(timerRef.current);
+              }
               setTimeout(() => {
                 handleScanComplete();
               }, 0);
@@ -168,15 +189,15 @@ export default function FaceScan({ onScanComplete }: Props) {
           });
         }, 1000);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Camera access denied or failed:", err);
       setStatus("error");
-      setError(err.message || "Failed to access camera. Please check permissions.");
+      setError(err instanceof Error ? err.message : "Failed to access camera. Please check permissions.");
     }
   };
 
   const initFaceMesh = () => {
-    const FaceMesh = (window as any).FaceMesh;
+    const FaceMesh = window.FaceMesh;
     if (!FaceMesh) {
       console.error("MediaPipe FaceMesh not loaded from CDN.");
       setStatus("error");
@@ -196,7 +217,7 @@ export default function FaceScan({ onScanComplete }: Props) {
       minTrackingConfidence: 0.5,
     });
 
-    faceMesh.onResults((results: any) => {
+    faceMesh.onResults((results) => {
       const canvas = canvasRef.current;
       if (!canvas) return;
       
@@ -214,7 +235,7 @@ export default function FaceScan({ onScanComplete }: Props) {
 
       if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
         facesDetectedRef.current += 1;
-        results.multiFaceLandmarks.forEach((landmarks: any[]) => {
+        results.multiFaceLandmarks.forEach((landmarks) => {
           
           // Subtle dots for full mesh
           landmarks.forEach((point) => {
@@ -286,7 +307,7 @@ export default function FaceScan({ onScanComplete }: Props) {
     faceMeshRef.current = faceMesh;
   };
 
-  const processVideoFrame = async () => {
+  const processVideoFrame = useCallback(async function frame() {
     if (
       status === "scanning" &&
       videoRef.current && 
@@ -300,9 +321,9 @@ export default function FaceScan({ onScanComplete }: Props) {
       }
     }
     if (status === "scanning") {
-      requestRef.current = requestAnimationFrame(processVideoFrame);
+      requestRef.current = requestAnimationFrame(frame);
     }
-  };
+  }, [status]);
 
   const handleVideoLoadedMetadata = () => {
     if (!videoRef.current || !canvasRef.current) return;
@@ -320,10 +341,11 @@ export default function FaceScan({ onScanComplete }: Props) {
   };
 
   useEffect(() => {
-    if (status === "scanning" && !requestRef.current && videoRef.current?.readyState >= 2) {
+    const video = videoRef.current;
+    if (status === "scanning" && !requestRef.current && video && video.readyState >= 2) {
       requestRef.current = requestAnimationFrame(processVideoFrame);
     }
-  }, [status]);
+  }, [status, processVideoFrame]);
 
   useEffect(() => {
     return () => {

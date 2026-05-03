@@ -1,4 +1,12 @@
 /* ─── Kashf.ai — Base Reset ─────────────────────────────────────── */
+@font-face {
+  font-family: "Talina";
+  src: url("./assets/Talina-DEMO.otf") format("opentype");
+  font-weight: 400 900;
+  font-style: normal;
+  font-display: swap;
+}
+
 *, *::before, *::after {
   box-sizing: border-box;
 }
@@ -13,7 +21,7 @@
   --border:  #E2E8F0;
   --shadow:  0 1px 3px rgba(15,23,42,0.08), 0 4px 16px rgba(15,23,42,0.06);
 
-  --sans: 'Geist Variable', 'Segoe UI', system-ui, sans-serif;
+  --sans: 'Talina', -apple-system, BlinkMacSystemFont, 'Geist Variable', 'Segoe UI', system-ui, sans-serif;
 
   font-family: var(--sans);
   font-size: 16px;
@@ -54,7 +62,7 @@ img {
 }
 
 body {
-  font-family: "Geist Variable", system-ui, sans-serif;
+  font-family: "Talina", -apple-system, BlinkMacSystemFont, "Geist Variable", system-ui, sans-serif;
 }
 
 /* ─── Accessibility Overrides ───────────────────────────────────── */

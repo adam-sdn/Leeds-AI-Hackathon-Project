@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
+import type { ConnectedHealthData } from '../types/health';
 
 type HealthBrand = {
   id: string;
@@ -18,7 +19,7 @@ const brands: HealthBrand[] = [
 ];
 
 type HealthDataConnectProps = {
-  onComplete: (data?: any) => void;
+  onComplete: (data?: ConnectedHealthData) => void;
 };
 
 export default function HealthDataConnect({ onComplete }: HealthDataConnectProps) {

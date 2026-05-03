@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "skills": {
+    "design-motion-principles": {
+      "source": "kylezantos/design-motion-principles",
+      "sourceType": "github",
+      "skillPath": "skills/design-motion-principles/SKILL.md",
+      "computedHash": "7e854ddaab73161e402567e9650936db9fd8292114d4c621e8c20b239a046b76"
+    },
+    "impeccable": {
+      "source": "pbakaus/impeccable",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/impeccable/SKILL.md",
+      "computedHash": "4d8946fa5000d67f7a5d2de7d86605090720bc55bccc0c59318027ce375e390a"
+    },
+    "product-requirements": {
+      "source": "cexll/myclaude",
+      "sourceType": "github",
+      "skillPath": "skills/product-requirements/SKILL.md",
+      "computedHash": "0333518feab4652ee6c9da8525e7e0d73941c7a771deef313b7aad01de5e30de"
+    },
+    "ui-ux-pro-max": {
+      "source": "nextlevelbuilder/ui-ux-pro-max-skill",
+      "sourceType": "github",
+      "skillPath": ".claude/skills/ui-ux-pro-max/SKILL.md",
+      "computedHash": "6337038fe1fe6bbe1b9f252ab678ee575859190bab6f0f246f4061824eb40875"
+    }
+  }
+}
