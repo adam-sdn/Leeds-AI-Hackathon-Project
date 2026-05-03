@@ -86,6 +86,9 @@ export default function ResultsDashboard({ result, scanResult, healthData, langu
       ? tailoredInsight.nhsSelfCareRecommendations
       : result.nhsSelfCare.flatMap((advice) => advice.selfCare.slice(0, 2)).slice(0, 5);
   const generatedImpact = tailoredInsight?.careImpact?.impact || impactData.impact;
+  const userFacingScanObservations = (scanResult?.observations || []).filter(
+    (observation) => !/unavailable|failed|skipped|fallback|error/i.test(`${observation.type} ${observation.label} ${observation.note}`)
+  );
   const tx = (text: string) => translateText(text, language);
 
   useEffect(() => {
@@ -349,7 +352,7 @@ export default function ResultsDashboard({ result, scanResult, healthData, langu
     doc.setFont("helvetica", "normal");
     doc.setFontSize(11);
     result.why.forEach(line => { addBullet(line); y += 2; });
-    if (scanResult && scanResult.observations.length > 0) {
+    if (userFacingScanObservations.length > 0) {
       addBullet("Some facial wellness signals were noted that may be worth discussing with a clinician.");
       y += 2;
     }
@@ -367,14 +370,14 @@ export default function ResultsDashboard({ result, scanResult, healthData, langu
     y += 8;
     addTranslationBlock("Translated GP questions", result.gpQuestions);
 
-    if (scanResult && scanResult.observations.length > 0) {
+    if (scanResult && userFacingScanObservations.length > 0) {
       ensureSpace(15);
       doc.setFont("helvetica", "bold");
       doc.setFontSize(15);
       doc.text("Facial Wellness Observations", margin, y);
       y += 8;
       doc.setFontSize(11);
-      scanResult.observations.forEach(obs => { addBullet(obs.label); y += 2; });
+      userFacingScanObservations.forEach(obs => { addBullet(obs.label); y += 2; });
 
       y += 4;
       doc.setFont("helvetica", "italic");
@@ -672,7 +675,7 @@ export default function ResultsDashboard({ result, scanResult, healthData, langu
           {(tailoredInsight?.whySuggested || result.why).map((item, index) => (
             <li key={index} style={styles.listItem}>{tx(item)}</li>
           ))}
-          {scanResult && scanResult.observations.length > 0 && (
+          {userFacingScanObservations.length > 0 && (
             <li style={styles.listItem}>{tx("Facial wellness signals detected during scan correlate with your wellness profile.")}</li>
           )}
         </ul>
@@ -714,7 +717,7 @@ export default function ResultsDashboard({ result, scanResult, healthData, langu
       </div>
 
       {/* 8. Facial Wellness Observations */}
-      {scanResult && scanResult.observations.length > 0 && (
+      {scanResult && userFacingScanObservations.length > 0 && (
         <div style={{...styles.card, borderLeft: '4px solid #60A5FA'}}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
             <h3 style={styles.cardTitle}>{uiText(language, "facialObservations")}</h3>
@@ -724,7 +727,7 @@ export default function ResultsDashboard({ result, scanResult, healthData, langu
             Kashf uses the face scan as supportive wellness context only. It helps shape follow-up questions, but it does not diagnose or confirm a medical condition.
           </p>
           <div style={styles.scanObservationGrid}>
-            {scanResult.observations.map((obs, i) => (
+            {userFacingScanObservations.map((obs, i) => (
               <div key={i} style={styles.scanObservationCard}>
                 <span style={styles.scanObservationDot} />
                 <div>

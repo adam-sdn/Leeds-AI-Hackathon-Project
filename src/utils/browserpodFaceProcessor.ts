@@ -59,15 +59,9 @@ async function assessImageSignals(imageBase64: string): Promise<ImageSignalAsses
     }
     if (!imageBase64.startsWith("data:image")) {
       return {
-        observations: [{
-          type: "scan_frame_unavailable",
-          label: "Final scan frame was not available for image signal analysis",
-          confidence: "moderate",
-          region: "full frame",
-          note: "Use symptom input and face mesh tracking as the main context."
-        }],
+        observations: [],
         insights: ["Image signal analysis was skipped because the captured frame was unavailable."],
-        visualConcernLevel: "moderate",
+        visualConcernLevel: "low",
       };
     }
 
