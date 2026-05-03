@@ -1,7 +1,10 @@
+import { useEffect, useState } from "react";
 import { jsPDF } from "jspdf";
 import logo from "../assets/logo.png";
 import type { AnalysisResult } from "../utils/riskEngine";
 import type { FaceScanResult } from "./FaceScan";
+import { generateTailoredInsight } from "../utils/aiReasoningEngine";
+import type { TailoredInsight } from "../utils/aiReasoningEngine";
 
 type Props = {
   result: AnalysisResult;
@@ -64,6 +67,27 @@ const getHealthStatus = (label: string, value: string | number) => {
 
 export default function ResultsDashboard({ result, scanResult, healthData, onStartAgain, onRescanFace }: Props) {
   const impactData = getImpactData(result.riskLevel);
+  const [tailoredInsight, setTailoredInsight] = useState<TailoredInsight | null>(null);
+  const [isLoadingAI, setIsLoadingAI] = useState(true);
+
+  useEffect(() => {
+    const synthesize = async () => {
+      setIsLoadingAI(true);
+      try {
+        const insight = await generateTailoredInsight({
+          analysis: result,
+          scan: scanResult,
+          healthData: healthData
+        });
+        setTailoredInsight(insight);
+      } catch (err) {
+        console.error("AI Synthesis failed:", err);
+      } finally {
+        setIsLoadingAI(false);
+      }
+    };
+    synthesize();
+  }, [result, scanResult, healthData]);
 
   const getAIInsight = () => {
     if (!healthData?.metrics) return null;
@@ -333,12 +357,78 @@ export default function ResultsDashboard({ result, scanResult, healthData, onSta
     const safetyText = "This is not a medical diagnosis. If your symptoms are severe, seek medical advice.";
     addWrappedText(safetyText, margin, contentWidth, 5);
 
+    if (tailoredInsight) {
+      ensureSpace(30);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(15);
+      doc.text("Tailored AI Insight", margin, y);
+      y += 8;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(11);
+      addWrappedText(tailoredInsight.clinicalNarrative, margin, contentWidth);
+      y += 4;
+      
+      doc.setFont("helvetica", "bold");
+      doc.text("Key Correlations:", margin, y);
+      y += 6;
+      doc.setFont("helvetica", "normal");
+      tailoredInsight.systemCorrelations.forEach(c => { addBullet(c); y += 2; });
+      y += 4;
+    }
+
     doc.save("kashf-report.pdf");
   };
 
   return (
     <div style={styles.container}>
       <h2 style={styles.title}>Your Assessment Report</h2>
+
+      {/* AI Reasoning Section */}
+      <div style={{ ...styles.card, background: 'linear-gradient(135deg, #F0F9FF 0%, #E0F2FE 100%)', border: '1px solid #BAE6FD' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+          <div style={{ padding: '8px', backgroundColor: '#0EA5E9', borderRadius: '10px', color: 'white' }}>
+            <span style={{ fontSize: '20px' }}>🤖</span>
+          </div>
+          <div>
+            <h3 style={{ ...styles.cardTitle, color: '#0369A1', marginBottom: '2px' }}>AI Synthesis</h3>
+            <p style={{ fontSize: '11px', color: '#0EA5E9', fontWeight: 600, textTransform: 'uppercase', margin: 0 }}>Tailored Perspective</p>
+          </div>
+        </div>
+
+        {isLoadingAI ? (
+          <div style={{ padding: '20px 0', textAlign: 'center' }}>
+            <div style={{ display: 'inline-block', width: '20px', height: '20px', border: '3px solid #0EA5E9', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite', marginBottom: '12px' }} />
+            <p style={{ color: '#0369A1', fontSize: '14px', fontWeight: 500 }}>Reasoning across systems...</p>
+            <style>{`
+              @keyframes spin { to { transform: rotate(360deg); } }
+            `}</style>
+          </div>
+        ) : tailoredInsight ? (
+          <div className="animate-fade">
+            <p style={{ fontSize: '15px', lineHeight: '1.6', color: '#0C4A6E', marginBottom: '20px', fontWeight: 500 }}>
+              {tailoredInsight.clinicalNarrative}
+            </p>
+            
+            <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '16px', marginBottom: '20px' }}>
+              <h4 style={{ fontSize: '12px', color: '#0369A1', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '12px' }}>System Correlations</h4>
+              <ul style={styles.list}>
+                {tailoredInsight.systemCorrelations.map((c, i) => (
+                  <li key={i} style={{ ...styles.listItem, color: '#0369A1', fontSize: '13px' }}>
+                    <span style={{ position: 'absolute', left: 0, color: '#0EA5E9' }}>→</span>
+                    {c}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div style={{ borderTop: '1px solid #BAE6FD', paddingTop: '16px' }}>
+              <p style={{ fontSize: '13px', color: '#0369A1', margin: 0 }}>
+                <strong>Personalized Advice:</strong> {tailoredInsight.personalizedAdvice}
+              </p>
+            </div>
+          </div>
+        ) : null}
+      </div>
 
       {/* 1. Risk Summary */}
       <div style={{...styles.card, borderTop: `4px solid ${styles.colors[result.riskLevel]}`}}>
@@ -409,33 +499,42 @@ export default function ResultsDashboard({ result, scanResult, healthData, onSta
       )}
 
       {/* 2. Recommended Next Step */}
-      <div style={styles.card}>
-        <h3 style={styles.cardTitle}>Recommended Next Step</h3>
-        <div style={styles.nextStepBox}>
-           <p style={styles.nextStepText}>{result.recommendation}</p>
-        </div>
+      <div style={{ ...styles.card, borderLeft: `4px solid ${styles.colors[result.riskLevel]}` }}>
+        <h3 style={styles.cardTitle}>Recommended next step</h3>
+        <p style={{ fontSize: '18px', fontWeight: '700', color: '#0F172A', marginBottom: '12px' }}>
+          {tailoredInsight?.nextStep || result.recommendation}
+        </p>
+        <p style={{ fontSize: '14px', color: '#64748B' }}>{result.explanation}</p>
       </div>
 
-      {/* 3. Care Impact Overview */}
+      {/* 3. Care Impact Dashboard */}
       <div style={styles.card}>
-        <h3 style={styles.cardTitle}>Care Impact Overview</h3>
-        <p style={{fontSize: '14px', color: '#64748B', marginBottom: '20px', marginTop: '4px'}}>Understanding the real-world impact of your care timeline.</p>
-        <div style={styles.comparisonGrid}>
-          <div style={styles.comparisonColumn}>
-            <span style={{...styles.comparisonTitle, color: '#15803D', background: '#DCFCE7'}}>If you act now</span>
-            <ul style={styles.list}>
-              {impactData.actNow.map((item, i) => <li key={i} style={{...styles.listItem, fontSize: '13px'}}>{item}</li>)}
+        <h3 style={styles.cardTitle}>Care Impact Dashboard</h3>
+        <p style={{ fontSize: '13px', color: '#64748B', marginBottom: '20px' }}>
+          Understanding the difference between immediate and delayed action:
+        </p>
+        
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
+          <div style={{ backgroundColor: '#F0FDF4', padding: '16px', borderRadius: '12px', border: '1px solid #BBF7D0' }}>
+            <h4 style={{ fontSize: '12px', color: '#166534', textTransform: 'uppercase', marginBottom: '8px' }}>If you act now</h4>
+            <ul style={{ ...styles.list, padding: 0, margin: 0 }}>
+              {(tailoredInsight?.careImpact.actNow || impactData.actNow).map((item, i) => (
+                <li key={i} style={{ ...styles.listItem, fontSize: '13px', color: '#14532D', marginBottom: '4px' }}>✓ {item}</li>
+              ))}
             </ul>
           </div>
-          <div style={styles.comparisonColumn}>
-            <span style={{...styles.comparisonTitle, color: '#B91C1C', background: '#FEE2E2'}}>If delayed</span>
-            <ul style={styles.list}>
-              {impactData.delayed.map((item, i) => <li key={i} style={{...styles.listItem, fontSize: '13px'}}>{item}</li>)}
+          <div style={{ backgroundColor: '#FEF2F2', padding: '16px', borderRadius: '12px', border: '1px solid #FECACA' }}>
+            <h4 style={{ fontSize: '12px', color: '#991B1B', textTransform: 'uppercase', marginBottom: '8px' }}>If delayed</h4>
+            <ul style={{ ...styles.list, padding: 0, margin: 0 }}>
+              {(tailoredInsight?.careImpact.delayed || impactData.delayed).map((item, i) => (
+                <li key={i} style={{ ...styles.listItem, fontSize: '13px', color: '#7F1D1D', marginBottom: '4px' }}>! {item}</li>
+              ))}
             </ul>
           </div>
         </div>
+
         <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid #E2E8F0' }}>
-          <h4 style={{ margin: '0 0 12px 0', fontSize: '14px', color: '#0F172A' }}>Estimated impact</h4>
+          <h4 style={{ margin: '0 0 12px 0', fontSize: '14px', color: '#0F172A' }}>Estimated impact levels</h4>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
             <ImpactMetric icon="clock" label="Time" value={impactData.impact.time} />
             <ImpactMetric icon="pulse" label="Care" value={impactData.impact.complexity} />
@@ -448,8 +547,12 @@ export default function ResultsDashboard({ result, scanResult, healthData, onSta
       <div style={styles.card}>
         <h3 style={styles.cardTitle}>Why Kashf suggests this</h3>
         <ul style={styles.list}>
-          {result.why.map((item, index) => <li key={index} style={styles.listItem}>{item}</li>)}
-          {scanResult && scanResult.observations.length > 0 && <li style={styles.listItem}>Some facial wellness signals were noted that may be worth discussing with a clinician.</li>}
+          {(tailoredInsight?.whySuggested || result.why).map((item, index) => (
+            <li key={index} style={styles.listItem}>{item}</li>
+          ))}
+          {scanResult && scanResult.observations.length > 0 && (
+            <li style={styles.listItem}>Facial wellness signals detected during scan correlate with your wellness profile.</li>
+          )}
         </ul>
       </div>
 
@@ -457,7 +560,9 @@ export default function ResultsDashboard({ result, scanResult, healthData, onSta
       <div style={styles.card}>
         <h3 style={styles.cardTitle}>What this could mean for you</h3>
         <ul style={styles.list}>
-          {result.biggerPicture.map((item, index) => <li key={index} style={styles.listItem}>{item}</li>)}
+          {(tailoredInsight?.biggerPicture || result.biggerPicture).map((item, index) => (
+            <li key={index} style={styles.listItem}>{item}</li>
+          ))}
         </ul>
       </div>
 
@@ -476,8 +581,13 @@ export default function ResultsDashboard({ result, scanResult, healthData, onSta
       {/* 7. Questions to ask your GP */}
       <div style={styles.card}>
         <h3 style={styles.cardTitle}>Questions to ask your GP</h3>
+        <p style={{ fontSize: '13px', color: '#64748B', marginBottom: '16px' }}>
+          Specific questions suggested by Kashf based on your unique profile:
+        </p>
         <ul style={styles.list}>
-          {result.gpQuestions.map((item, index) => <li key={index} style={styles.listItem}>{item}</li>)}
+          {(tailoredInsight?.dynamicGPQuestions || result.gpQuestions).map((item, index) => (
+            <li key={index} style={styles.listItem}>{item}</li>
+          ))}
         </ul>
       </div>
 
