@@ -5,13 +5,13 @@
  * context into cautious NHS-style guidance.
  */
 
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import type { AnalysisResult } from "./riskEngine";
 import { findNhsReferencesForText } from "./riskEngine";
 import type { FaceScanResult } from "../components/FaceScan";
 import type { ConnectedHealthData } from "../types/health";
 import type { AppLanguage } from "../types/language";
 import { localisedPromptSuffix, translateText } from "./translation";
+import { KASHF_SYSTEM_PROMPT } from "./kashfPrompt.js";
 
 export interface TailoredInsight {
   clinicalNarrative: string;
@@ -44,8 +44,56 @@ export interface ReasoningInput {
   healthData?: ConnectedHealthData | null;
 }
 
-const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
-const genAI = API_KEY ? new GoogleGenerativeAI(API_KEY) : null;
+type GroqChatMessage = {
+  role: "system" | "user" | "assistant";
+  content: string;
+};
+
+type GroqKashfReport = {
+  riskLevel?: "low" | "moderate" | "urgent";
+  riskReason?: string;
+  tailoredPerspective?: string;
+  systemCorrelations?: string[];
+  facialSignals?: string[];
+  wearableInsights?: string[];
+  recommendedAction?: "self-care" | "pharmacy" | "gp" | "urgent-care" | "emergency";
+  recommendedActionText?: string;
+  nextSteps?: string[];
+  nhsSymptomMatches?: Array<{
+    symptom: string;
+    nhsLabel: string;
+    nhsUrl: string;
+  }>;
+  nhsSelfCareGuidance?: string[];
+  careImpactDashboard?: {
+    ifActNow?: string[];
+    ifDelayed?: string[];
+    estimatedImpact?: {
+      time?: "Minimal" | "Low" | "Moderate" | "High" | string;
+      care?: "Low" | "Moderate" | "High" | string;
+      risk?: "Low" | "Moderate" | "High" | string;
+    };
+  };
+  questionsForGP?: string[];
+  redFlags?: string[];
+  isRedFlag?: boolean;
+  signalsIdentified?: string[];
+  systemsAffected?: string[];
+  gpSummary?: {
+    symptoms?: string;
+    severity?: string;
+    duration?: string;
+    riskLevel?: string;
+    redFlag?: string;
+    suggestedNextStep?: string;
+  };
+  safetyNetting?: string;
+};
+
+const GROQ_ENDPOINT = "https://api.groq.com/openai/v1/chat/completions";
+const GROQ_MODEL = "llama-3.3-70b-versatile";
+const GROQ_API_KEY = import.meta.env.VITE_GROQ_API_KEY;
+const hasGroqKey = Boolean(GROQ_API_KEY && GROQ_API_KEY !== "your_key_here");
 
 function describePatientContext(input: ReasoningInput): string {
   const symptomList = input.analysis.selectedSymptomLabels.join(", ") || "No symptoms selected";
@@ -117,60 +165,149 @@ ${advice.seekHelp.map((item) => `- ${item}`).join("\n")}
 `).join("\n");
 }
 
+function severityToScore(severity: AnalysisResult["severity"]): number {
+  if (severity === "severe") return 9;
+  if (severity === "moderate") return 6;
+  return 3;
+}
+
+function parseMetricNumber(value?: string): number | null {
+  if (!value) return null;
+  const match = value.match(/[\d.]+/);
+  return match ? Number(match[0]) : null;
+}
+
+function buildGroqUserMessage(input: ReasoningInput): string {
+  const metrics = input.healthData?.metrics;
+  const visualConcern = input.scan?.visualConcernLevel || "low";
+  const concernScore = visualConcern === "high" ? 80 : visualConcern === "moderate" ? 55 : 20;
+  const facialAsymmetry = visualConcern === "high" ? 0.16 : visualConcern === "moderate" ? 0.09 : 0.03;
+  const scanObservationCount = input.scan?.observations.length || 0;
+  const recovery = parseMetricNumber(metrics?.recovery);
+  const sleep = parseMetricNumber(metrics?.sleep);
+  const hrv = parseMetricNumber(metrics?.hrv);
+  const steps = metrics?.steps ? parseInt(metrics.steps.replace(/[^\d]/g, ""), 10) : null;
+  const restingHR = parseMetricNumber(metrics?.heartRate);
+
+  return `Please analyse the following wellness data:
+
+SYMPTOMS:
+- Reported symptoms: ${input.analysis.selectedSymptomLabels.join(", ")}
+- Duration: ${input.analysis.duration || "Not specified"}
+- Severity: ${severityToScore(input.analysis.severity)}/10
+
+FACIAL WELLNESS SCAN:
+- Eye openness score: ${scanObservationCount > 0 ? "visible cues recorded" : "not available"}
+- Blink rate: not available bpm
+- Facial asymmetry: ${facialAsymmetry}
+- Fatigue score: ${concernScore}/100
+- Head tilt: not available degrees
+- Scan quality: ${input.scan?.scanQuality || "not supplied"}
+- Facial scan observations: ${input.scan?.observations.map((observation) => observation.label).join("; ") || "none supplied"}
+
+WEARABLE / HEALTH DATA:
+- Resting heart rate: ${restingHR ?? "not available"} bpm
+- Sleep last night: ${sleep ?? "not available"} hours
+- Recovery / readiness: ${recovery ?? "not available"}%
+- HRV: ${hrv ?? "not available"}ms
+- Steps today: ${steps ?? "not available"}
+- Activity level: ${metrics?.activity || "not available"}
+
+USER PROFILE:
+- Age: not provided
+
+NHS SELF-CARE SOURCE CONTEXT:
+${nhsSelfCareContext(input)}`;
+}
+
+async function callGroq(messages: GroqChatMessage[], maxTokens = 1000): Promise<string> {
+  const response = await fetch(GROQ_ENDPOINT, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${GROQ_API_KEY}`,
+    },
+    body: JSON.stringify({
+      model: GROQ_MODEL,
+      max_tokens: maxTokens,
+      messages,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Groq request failed: ${response.status}`);
+  }
+
+  const data = await response.json();
+  const rawText = data.choices?.[0]?.message?.content;
+  if (typeof rawText !== "string") {
+    throw new Error("Groq response did not include message content");
+  }
+
+  return rawText;
+}
+
+async function callGroqReport(input: ReasoningInput): Promise<GroqKashfReport> {
+  const rawText = await callGroq([
+    { role: "system", content: KASHF_SYSTEM_PROMPT },
+    { role: "user", content: buildGroqUserMessage(input) },
+  ]);
+  const clean = rawText.replace(/```json|```/g, "").trim();
+  return JSON.parse(clean) as GroqKashfReport;
+}
+
+function mapGroqReportToTailoredInsight(report: GroqKashfReport, input: ReasoningInput): TailoredInsight {
+  const fallback = generateHeuristicFallbackSync(input);
+  const facialSignals = report.facialSignals || [];
+  const wearableInsights = report.wearableInsights || [];
+  const redFlags = report.redFlags || [];
+  const whySuggested = [
+    ...(report.signalsIdentified || []),
+    ...facialSignals,
+    ...wearableInsights,
+    ...redFlags,
+  ].filter(Boolean);
+
+  return {
+    clinicalNarrative: report.tailoredPerspective || report.riskReason || fallback.clinicalNarrative,
+    dynamicGPQuestions: report.questionsForGP?.length ? report.questionsForGP : fallback.dynamicGPQuestions,
+    systemCorrelations: report.systemCorrelations?.length ? report.systemCorrelations : fallback.systemCorrelations,
+    personalizedAdvice: report.safetyNetting
+      ? `${report.recommendedActionText || fallback.nextStep} ${report.safetyNetting}`
+      : report.recommendedActionText || fallback.personalizedAdvice,
+    nhsSelfCareRecommendations: report.nhsSelfCareGuidance?.length
+      ? report.nhsSelfCareGuidance
+      : fallback.nhsSelfCareRecommendations,
+    nextStep: report.recommendedActionText || fallback.nextStep,
+    careImpact: {
+      actNow: report.careImpactDashboard?.ifActNow?.length
+        ? report.careImpactDashboard.ifActNow
+        : fallback.careImpact.actNow,
+      delayed: report.careImpactDashboard?.ifDelayed?.length
+        ? report.careImpactDashboard.ifDelayed
+        : fallback.careImpact.delayed,
+      impact: {
+        time: report.careImpactDashboard?.estimatedImpact?.time || fallback.careImpact.impact.time,
+        complexity: report.careImpactDashboard?.estimatedImpact?.care || fallback.careImpact.impact.complexity,
+        escalation: report.careImpactDashboard?.estimatedImpact?.risk || fallback.careImpact.impact.escalation,
+      },
+    },
+    whySuggested: whySuggested.length ? whySuggested : fallback.whySuggested,
+    biggerPicture: report.systemsAffected?.length ? report.systemsAffected : fallback.biggerPicture,
+  };
+}
+
 export async function generateTailoredInsight(input: ReasoningInput): Promise<TailoredInsight> {
-  if (!genAI) {
-    console.warn("[AI Reasoning Engine] No Gemini API key found. Using heuristic fallback.");
+  if (!hasGroqKey) {
+    console.warn("[AI Reasoning Engine] No Groq API key found. Using heuristic fallback.");
     return generateHeuristicFallback(input);
   }
 
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-  const prompt = `
-You are Kashf, an NHS-style patient guidance assistant.
-Synthesize all supplied patient context into a tailored, cautious health insight.
-
-${describePatientContext(input)}
-
-NHS SELF-CARE SOURCE CONTEXT
-Use these NHS-derived points for self-care recommendations. Do not invent treatment advice outside this context.
-${nhsSelfCareContext(input)}
-
-OUTPUT FORMAT (JSON):
-{
-  "clinicalNarrative": "A 2-3 sentence patient-friendly summary connecting symptoms, health metrics, and facial wellness signals without diagnosing.",
-  "dynamicGPQuestions": ["3-5 specific questions for the user to ask their GP"],
-  "systemCorrelations": ["3 specific links found between symptom input, connected health data, and facial wellness data"],
-  "personalizedAdvice": "1-2 sentences of safety-first guidance using NHS-style wording.",
-  "nhsSelfCareRecommendations": ["3-5 recommendations derived only from the NHS SELF-CARE SOURCE CONTEXT, with cautious wording and no medication dosing"],
-  "nextStep": "A concise recommended action.",
-  "careImpact": {
-    "actNow": ["2 benefits of acting immediately, based on symptoms, face scan context and health data"],
-    "delayed": ["2 risks or consequences of delaying care, based on symptoms, face scan context and health data"],
-    "impact": {
-      "time": "Low, moderate, high, or a short patient-friendly estimate",
-      "complexity": "Low, moderate, or high",
-      "escalation": "Low, moderate, or high"
-    }
-  },
-  "whySuggested": ["2-3 bullet points explaining why this care level was chosen"],
-  "biggerPicture": ["2 points about the broader health impact of these symptoms"]
-}
-
-${safetyGuidelines()}
-`;
-
   try {
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-
-    if (!jsonMatch) {
-      throw new Error("No valid JSON found in model response");
-    }
-
-    return JSON.parse(jsonMatch[0]);
+    const groqReport = await callGroqReport(input);
+    return mapGroqReportToTailoredInsight(groqReport, input);
   } catch (error) {
-    console.error("[AI Reasoning Engine] Gemini processing error. Falling back to heuristics.", error);
+    console.error("[AI Reasoning Engine] Groq processing error. Falling back to heuristics.", error);
     return generateHeuristicFallback(input);
   }
 }
@@ -183,11 +320,10 @@ export async function generateChatAssistantReply(
 ): Promise<string> {
   const latestUserMessage = [...messages].reverse().find((message) => message.role === "user")?.content || "";
 
-  if (!genAI) {
+  if (!hasGroqKey) {
     return translateText(generateChatFallback(input, latestUserMessage, tailoredInsight), language);
   }
 
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
   const conversation = messages
     .slice(-8)
     .map((message) => `${message.role === "user" ? "User" : "Kashf"}: ${message.content}`)
@@ -218,16 +354,21 @@ Return plain text only. Do not use markdown tables. If the user asks about a sym
 `;
 
   try {
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    return response.text().trim();
+    return (await callGroq([
+      { role: "system", content: "You are Kashf, a UK NHS-style wellness triage explainer. You are not a doctor. Return plain text only for this chat reply." },
+      { role: "user", content: prompt },
+    ], 700)).trim();
   } catch (error) {
-    console.error("[AI Chat Assistant] Gemini processing error. Falling back to heuristics.", error);
+    console.error("[AI Chat Assistant] Groq processing error. Falling back to heuristics.", error);
     return translateText(generateChatFallback(input, latestUserMessage, tailoredInsight), language);
   }
 }
 
 async function generateHeuristicFallback(input: ReasoningInput): Promise<TailoredInsight> {
+  return generateHeuristicFallbackSync(input);
+}
+
+function generateHeuristicFallbackSync(input: ReasoningInput): TailoredInsight {
   const { analysis, scan, healthData } = input;
   const symptoms = analysis.selectedSymptomLabels;
   const risk = analysis.riskLevel;

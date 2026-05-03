@@ -382,9 +382,9 @@
 }
 
 .severity-btn--mild.severity-btn--active {
-  border-color: var(--green);
-  background: #ECFDF5;
-  color: #065F46;
+  border-color: #0F766E;
+  background: #0F766E;
+  color: #F0FDFA;
 }
 
 .severity-btn--moderate.severity-btn--active {
