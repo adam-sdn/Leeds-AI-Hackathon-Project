@@ -250,6 +250,9 @@ export default function ResultsDashboard({ result, scanResult, healthData, onSta
     result.why.forEach(line => { addBullet(line); y += 2; });
     if (scanResult && scanResult.observations.length > 0) {
       addBullet("Some facial wellness signals were noted that may be worth discussing with a clinician.");
+      if (scanResult.insights && scanResult.insights.length > 0) {
+        scanResult.insights.forEach(insight => addBullet(`BP Insight: ${insight}`));
+      }
       y += 2;
     }
     y += 8;
@@ -272,6 +275,16 @@ export default function ResultsDashboard({ result, scanResult, healthData, onSta
       y += 8;
       doc.setFontSize(11);
       scanResult.observations.forEach(obs => { addBullet(obs.label); y += 2; });
+      
+      if (scanResult.insights && scanResult.insights.length > 0) {
+        y += 4;
+        doc.setFont("helvetica", "bold");
+        doc.text("BrowserPod Local Insights:", margin, y);
+        y += 6;
+        doc.setFont("helvetica", "normal");
+        scanResult.insights.forEach(insight => { addBullet(insight); y += 2; });
+      }
+
       y += 4;
       doc.setFont("helvetica", "italic");
       doc.setFontSize(9);
@@ -479,6 +492,18 @@ export default function ResultsDashboard({ result, scanResult, healthData, onSta
           <ul style={styles.list}>
             {scanResult.observations.map((obs, i) => <li key={i} style={styles.listItem}>{obs.label}</li>)}
           </ul>
+          
+          {scanResult.insights && scanResult.insights.length > 0 && (
+            <div style={{ marginTop: '16px', padding: '12px', backgroundColor: '#F0F9FF', borderRadius: '8px', borderLeft: '4px solid #0EA5E9' }}>
+              <h4 style={{ margin: '0 0 8px 0', fontSize: '13px', color: '#0369A1', textTransform: 'uppercase', letterSpacing: '0.025em' }}>BrowserPod Insights</h4>
+              <ul style={{ ...styles.list, marginBottom: 0 }}>
+                {scanResult.insights.map((insight, i) => (
+                  <li key={i} style={{ ...styles.listItem, color: '#0C4A6E', fontSize: '13px', marginBottom: '4px' }}>{insight}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           <p style={{fontSize: '13px', color: '#64748B', marginTop: '16px', fontStyle: 'italic'}}>These are visible wellness signals only and not a medical diagnosis.</p>
         </div>
       )}
@@ -609,6 +634,18 @@ const styles = {
   button: { padding: "16px 32px", borderRadius: "12px", border: "none", backgroundColor: "#0F172A", color: "#FFFFFF", fontSize: "16px", fontWeight: "700", cursor: "pointer", boxShadow: "0 10px 20px rgba(15, 23, 42, 0.2)", transition: 'all 0.2s' },
   secondaryButton: { padding: "12px 24px", borderRadius: "12px", border: "1.5px solid #0F172A", backgroundColor: "transparent", color: "#0F172A", fontSize: "15px", fontWeight: "600", cursor: "pointer", transition: 'all 0.2s', width: '100%', maxWidth: '320px' },
   actionGroup: { display: 'flex', flexDirection: 'column' as const, gap: '12px', alignItems: 'center', marginTop: '20px' },
-  rescanButton: { background: 'transparent', border: '1px solid #CBD5E1', color: '#475569', padding: '10px 24px', marginTop: '4px', borderRadius: '12px', cursor: 'pointer', alignSelf: 'center' },
+  rescanButton: { 
+    background: 'transparent', 
+    border: '2px solid #60A5FA', 
+    color: '#1E40AF', 
+    padding: '12px 24px', 
+    marginTop: '12px', 
+    borderRadius: '12px', 
+    cursor: 'pointer', 
+    alignSelf: 'center',
+    fontWeight: '700',
+    fontSize: '14px',
+    transition: 'all 0.2s ease'
+  },
   colors: { low: '#22C55E', moderate: '#F59E0B', urgent: '#EF4444' }
 };

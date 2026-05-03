@@ -1,25 +1,11 @@
 import { useRef, useState, useEffect } from "react";
+import { processFaceScanWithBrowserPod } from "../utils/browserpodFaceProcessor";
+import type { Observation, ProcessedFaceResult, RawScanData } from "../utils/browserpodFaceProcessor";
 
-export type Observation = {
-  type: string;
-  label: string;
-  confidence: "low" | "moderate" | "high";
-  region: string;
-  note: string;
-};
-
-export type FaceScanResult = {
-  scanId: string;
-  timestamp: string;
-  durationSeconds: number;
-  scanQuality: string;
-  framesCaptured: number;
-  observations: Observation[];
-  summary: string;
-};
+export type { Observation, ProcessedFaceResult as FaceScanResult };
 
 type Props = {
-  onScanComplete?: (result: FaceScanResult) => void;
+  onScanComplete?: (result: ProcessedFaceResult) => void;
 };
 
 type ScanStatus = 
@@ -41,7 +27,8 @@ export default function FaceScan({ onScanComplete }: Props) {
   const [status, setStatus] = useState<ScanStatus>("idle");
   const [error, setError] = useState<string | null>(null);
   const [countdown, setCountdown] = useState<number>(10);
-  const [scanResult, setScanResult] = useState<FaceScanResult | null>(null);
+  const [scanResult, setScanResult] = useState<ProcessedFaceResult | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const stopCamera = () => {
     if (requestRef.current) {
@@ -59,7 +46,26 @@ export default function FaceScan({ onScanComplete }: Props) {
     }
   };
 
-  const generateDynamicResult = (): FaceScanResult => {
+  const captureFinalFrame = (): string => {
+    if (!videoRef.current || !canvasRef.current) return "";
+    
+    // Use a temporary canvas to capture the raw video frame (without the mesh overlay)
+    const tempCanvas = document.createElement("canvas");
+    tempCanvas.width = videoRef.current.videoWidth;
+    tempCanvas.height = videoRef.current.videoHeight;
+    const ctx = tempCanvas.getContext("2d");
+    if (!ctx) return "";
+    
+    // Draw current video frame
+    ctx.drawImage(videoRef.current, 0, 0, tempCanvas.width, tempCanvas.height);
+    return tempCanvas.toDataURL("image/jpeg", 0.8);
+  };
+
+  const handleScanComplete = async () => {
+    stopCamera();
+    setIsProcessing(true);
+    
+    const finalImage = captureFinalFrame();
     const totalFrames = frameCountRef.current;
     const detectedFrames = facesDetectedRef.current;
     
@@ -70,34 +76,8 @@ export default function FaceScan({ onScanComplete }: Props) {
       else if (ratio > 0.4) quality = "Fair";
     }
 
-    const obs: Observation[] = [];
-    
-    if (quality === "Good") {
-      obs.push({
-        type: "symmetry",
-        label: "Facial symmetry appears balanced",
-        confidence: "high",
-        region: "full face",
-        note: "Visible wellness signal only."
-      });
-      obs.push({
-        type: "position",
-        label: "Face position was stable during scan",
-        confidence: "high",
-        region: "full face",
-        note: "Visible wellness signal only."
-      });
-    } else {
-      obs.push({
-        type: "position",
-        label: "Face position varied during scan",
-        confidence: "moderate",
-        region: "full face",
-        note: "Visible wellness signal only."
-      });
-    }
-
-    obs.push(
+    // Initial observations (detected by local frontend logic)
+    const baseObservations: Observation[] = [
       {
         type: "under_eye_darkness",
         label: "Possible under-eye tiredness cue",
@@ -106,39 +86,53 @@ export default function FaceScan({ onScanComplete }: Props) {
         note: "Visible wellness signal only."
       },
       {
-        type: "cheek_redness",
-        label: "Possible cheek redness cue",
-        confidence: "low",
-        region: "cheeks",
-        note: "Visible wellness signal only."
-      },
-      {
         type: "lip_dryness",
         label: "Possible lip dryness cue",
         confidence: "moderate",
         region: "lips",
         note: "Visible wellness signal only."
+      },
+      {
+        type: "cheek_redness",
+        label: "Possible cheek redness cue",
+        confidence: "low",
+        region: "cheeks",
+        note: "Visible wellness signal only."
       }
-    );
+    ];
 
-    return {
-      scanId: `scan-${Date.now()}`,
-      timestamp: new Date().toISOString(),
-      durationSeconds: 10,
+    if (quality === "Good") {
+      baseObservations.push({
+        type: "symmetry",
+        label: "Facial symmetry appears balanced",
+        confidence: "high",
+        region: "full face",
+        note: "Visible wellness signal only."
+      });
+    }
+
+    const rawData: RawScanData = {
+      imageBase64: finalImage,
       scanQuality: quality,
       framesCaptured: totalFrames,
-      observations: obs,
-      summary: "Scan completed. Some visible wellness signals were noted. These may be worth mentioning to a GP if symptoms persist."
+      timestamp: new Date().toISOString(),
+      landmarksAvailable: detectedFrames > 0,
+      observations: baseObservations
     };
-  };
 
-  const handleScanComplete = () => {
-    stopCamera();
-    const result = generateDynamicResult();
-    setScanResult(result);
-    setStatus("complete");
-    if (onScanComplete) {
-      onScanComplete(result);
+    try {
+      const result = await processFaceScanWithBrowserPod(rawData);
+      setScanResult(result);
+      setStatus("complete");
+      if (onScanComplete) {
+        onScanComplete(result);
+      }
+    } catch (err) {
+      console.error("Failed to process scan with BrowserPod:", err);
+      setStatus("error");
+      setError("Processing failed. Please try again.");
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -359,7 +353,7 @@ export default function FaceScan({ onScanComplete }: Props) {
           }}>
             {status === "idle" && "Ready to start"}
             {status === "requesting permission" && "Requesting camera..."}
-            {status === "scanning" && `Scanning... ${countdown}s remaining`}
+            {status === "scanning" && (isProcessing ? "Finalizing analysis..." : `Scanning... ${countdown}s remaining`)}
             {status === "complete" && "Scan complete"}
             {status === "error" && "Error"}
           </span>
@@ -473,7 +467,7 @@ export default function FaceScan({ onScanComplete }: Props) {
           <div style={{ display: "inline-flex", gap: "16px", marginBottom: "20px", fontSize: "14px", fontWeight: 500, backgroundColor: "#F8FAFC", padding: "8px 16px", borderRadius: "8px", border: "1px solid #E2E8F0" }}>
             <span style={{ color: "#334155" }}>Quality: <span style={{ color: scanResult.scanQuality === "Good" ? "#16A34A" : "#D97706" }}>{scanResult.scanQuality}</span></span>
             <span style={{ color: "#94A3B8" }}>|</span>
-            <span style={{ color: "#334155" }}>Frames: {scanResult.framesCaptured}</span>
+            <span style={{ color: "#334155" }}>Processed: BrowserPod Engine</span>
           </div>
 
           <div style={{ backgroundColor: "#EFF6FF", border: "1px solid #BFDBFE", padding: "16px", borderRadius: "12px", marginBottom: "24px", textAlign: "left" }}>
