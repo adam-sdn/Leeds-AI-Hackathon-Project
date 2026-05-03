@@ -388,15 +388,15 @@
 }
 
 .severity-btn--moderate.severity-btn--active {
-  border-color: var(--amber);
-  background: #FFFBEB;
-  color: #92400E;
+  border-color: #B45309;
+  background: #B45309;
+  color: #FFFBEB;
 }
 
 .severity-btn--severe.severity-btn--active {
-  border-color: var(--red);
-  background: #FEF2F2;
-  color: #991B1B;
+  border-color: #B91C1C;
+  background: #B91C1C;
+  color: #FEF2F2;
 }
 
 /* ─── Duration Input ────────────────────────────────────────────── */

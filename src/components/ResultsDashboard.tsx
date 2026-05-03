@@ -86,9 +86,6 @@ export default function ResultsDashboard({ result, scanResult, healthData, langu
       ? tailoredInsight.nhsSelfCareRecommendations
       : result.nhsSelfCare.flatMap((advice) => advice.selfCare.slice(0, 2)).slice(0, 5);
   const generatedImpact = tailoredInsight?.careImpact?.impact || impactData.impact;
-  const cleanScanInsights = (scanResult?.insights || []).filter((insight) =>
-    !/fallback|error|api key|failed/i.test(insight)
-  );
   const tx = (text: string) => translateText(text, language);
 
   useEffect(() => {
@@ -354,9 +351,6 @@ export default function ResultsDashboard({ result, scanResult, healthData, langu
     result.why.forEach(line => { addBullet(line); y += 2; });
     if (scanResult && scanResult.observations.length > 0) {
       addBullet("Some facial wellness signals were noted that may be worth discussing with a clinician.");
-      if (cleanScanInsights.length > 0) {
-        cleanScanInsights.forEach(insight => addBullet(`Scan insight: ${insight}`));
-      }
       y += 2;
     }
     y += 8;
@@ -381,15 +375,6 @@ export default function ResultsDashboard({ result, scanResult, healthData, langu
       y += 8;
       doc.setFontSize(11);
       scanResult.observations.forEach(obs => { addBullet(obs.label); y += 2; });
-      
-      if (cleanScanInsights.length > 0) {
-        y += 4;
-        doc.setFont("helvetica", "bold");
-        doc.text("BrowserPod Local Insights:", margin, y);
-        y += 6;
-        doc.setFont("helvetica", "normal");
-        cleanScanInsights.forEach(insight => { addBullet(insight); y += 2; });
-      }
 
       y += 4;
       doc.setFont("helvetica", "italic");
@@ -735,23 +720,21 @@ export default function ResultsDashboard({ result, scanResult, healthData, langu
             <h3 style={styles.cardTitle}>{uiText(language, "facialObservations")}</h3>
             <span style={{fontSize: '12px', color: 'var(--muted)', fontWeight: 650}}>Scan quality: {scanResult.scanQuality}</span>
           </div>
-          <p style={{fontSize: '14px', color: 'var(--muted)', marginBottom: '16px'}}>Kashf noticed the following visible wellness signals:</p>
-          <ul style={styles.list}>
-            {scanResult.observations.map((obs, i) => <li key={i} style={styles.listItem}>{tx(obs.label)}</li>)}
-          </ul>
-          
-          {cleanScanInsights.length > 0 && (
-            <div style={{ marginTop: '16px', padding: '12px', backgroundColor: '#F0F9FF', borderRadius: '8px', borderLeft: '4px solid #0EA5E9' }}>
-              <h4 style={{ margin: '0 0 8px 0', fontSize: '13px', color: '#0369A1', textTransform: 'uppercase', letterSpacing: '0.025em' }}>BrowserPod Insights</h4>
-              <ul style={{ ...styles.list, marginBottom: 0 }}>
-                {cleanScanInsights.map((insight, i) => (
-                  <li key={i} style={{ ...styles.listItem, color: '#0C4A6E', fontSize: '13px', marginBottom: '4px' }}>{tx(insight)}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          <p style={{fontSize: '13px', color: 'var(--muted)', marginTop: '16px', fontStyle: 'italic'}}>These are visible wellness signals only and not a medical diagnosis.</p>
+          <p style={{fontSize: '14px', color: 'var(--muted)', marginBottom: '16px', lineHeight: 1.55}}>
+            Kashf uses the face scan as supportive wellness context only. It helps shape follow-up questions, but it does not diagnose or confirm a medical condition.
+          </p>
+          <div style={styles.scanObservationGrid}>
+            {scanResult.observations.map((obs, i) => (
+              <div key={i} style={styles.scanObservationCard}>
+                <span style={styles.scanObservationDot} />
+                <div>
+                  <strong style={styles.scanObservationTitle}>{tx(obs.label)}</strong>
+                  <p style={styles.scanObservationNote}>{tx(obs.note || "Visible wellness context only.")}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+          <p style={styles.scanDisclaimer}>Visible wellness context only. Not a medical diagnosis.</p>
         </div>
       )}
 
@@ -907,6 +890,12 @@ const styles = {
   healthMetricLabel: { fontSize: '11px', color: '#BAE6FD', fontWeight: 800, textTransform: 'uppercase' as const, letterSpacing: '0.05em' },
   healthMetricValue: { fontSize: '18px', fontWeight: '900', color: '#F8FBFF' },
   miniBadge: { fontSize: '10px', padding: '2px 6px', borderRadius: '999px', backgroundColor: 'rgba(14, 165, 233, 0.18)', color: '#BAE6FD', fontWeight: 800, textTransform: 'uppercase' as const },
+  scanObservationGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '12px', marginTop: '14px' },
+  scanObservationCard: { display: 'flex', gap: '12px', padding: '14px', borderRadius: '16px', background: 'rgba(3, 17, 42, 0.42)', border: '1px solid rgba(147, 197, 253, 0.18)' },
+  scanObservationDot: { width: '10px', height: '10px', borderRadius: '999px', background: '#60A5FA', boxShadow: '0 0 18px rgba(96, 165, 250, 0.72)', flex: '0 0 auto', marginTop: '5px' },
+  scanObservationTitle: { display: 'block', color: '#F8FBFF', fontSize: '14px', lineHeight: 1.35 },
+  scanObservationNote: { color: '#BAE6FD', fontSize: '12px', lineHeight: 1.45, margin: '5px 0 0' },
+  scanDisclaimer: { fontSize: '12px', color: '#BAE6FD', marginTop: '16px', fontWeight: 700, fontStyle: 'italic' },
   gpSummaryGrid: { display: 'flex', flexDirection: 'column' as const, gap: '4px' },
   safetyCard: { background: "linear-gradient(145deg, rgba(127, 29, 29, 0.34), rgba(3, 14, 34, 0.72))", color: "#FEE2E2", borderRadius: "22px", padding: "24px", border: "1.5px solid rgba(252, 165, 165, 0.34)", boxShadow: "0 18px 54px rgba(2, 6, 23, 0.28), inset 0 1px 0 rgba(255,255,255,0.12)" },
   button: { padding: "16px 32px", borderRadius: "16px", border: "1px solid rgba(186, 230, 253, 0.38)", background: "linear-gradient(135deg, #0EA5E9, #2563EB)", color: "#FFFFFF", fontSize: "16px", fontWeight: "800", cursor: "pointer", boxShadow: "0 18px 42px rgba(37, 99, 235, 0.28)", transition: 'all 0.45s cubic-bezier(0.16, 1, 0.3, 1)' },
