@@ -1,7 +1,6 @@
 import { jsPDF } from "jspdf";
 import logo from "../assets/logo.png";
 import type { AnalysisResult } from "../utils/riskEngine";
-
 import type { FaceScanResult } from "./FaceScan";
 
 type Props = {
@@ -92,13 +91,10 @@ export default function ResultsDashboard({ result, scanResult, healthData, onSta
     const bottomMargin = 20;
     let y = 35;
 
-    // Helper: Add page if needed
     const ensureSpace = (requiredHeight: number) => {
       if (y + requiredHeight > pageHeight - bottomMargin) {
         doc.addPage();
-        y = 20; // reset to top margin
-        
-        // Add continuation header
+        y = 20;
         doc.setFont("helvetica", "bold");
         doc.setFontSize(10);
         doc.setTextColor(15, 23, 42);
@@ -108,7 +104,6 @@ export default function ResultsDashboard({ result, scanResult, healthData, onSta
       }
     };
 
-    // Helper: Add wrapped text and update y
     const addWrappedText = (text: string, x: number, maxWidth: number, lineHeight: number = 6) => {
       const lines = doc.splitTextToSize(text, maxWidth);
       ensureSpace(lines.length * lineHeight);
@@ -116,41 +111,34 @@ export default function ResultsDashboard({ result, scanResult, healthData, onSta
       y += lines.length * lineHeight;
     };
 
-    // Helper: Add bullet point with hanging indent and update y
     const addBullet = (text: string) => {
       const bulletLineHeight = 6;
       const bulletX = margin;
       const textX = margin + 5;
       const textMaxWidth = contentWidth - 5;
-      
       const lines = doc.splitTextToSize(text, textMaxWidth);
       ensureSpace(lines.length * bulletLineHeight);
-      
       doc.text("•", bulletX, y);
       doc.text(lines, textX, y);
-      
       y += lines.length * bulletLineHeight;
     };
 
-    // 1. Header & Logo
     doc.addImage(logo, "PNG", pageWidth - 55, 10, 40, 15);
-    doc.setDrawColor(226, 232, 240); // Soft border color
+    doc.setDrawColor(226, 232, 240);
     doc.line(margin, 28, pageWidth - margin, 28);
 
     doc.setFont("helvetica", "bold");
     doc.setFontSize(20);
-    doc.setTextColor(15, 23, 42); // Navy
+    doc.setTextColor(15, 23, 42);
     doc.text("Kashf Care Summary", margin, y);
     y += 10;
 
     doc.setFont("helvetica", "normal");
     doc.setFontSize(10);
-    doc.setTextColor(100, 116, 139); // Muted
+    doc.setTextColor(100, 116, 139);
     doc.text(`Generated on: ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`, margin, y);
     y += 15;
 
-    // 2. Risk Overview
-    ensureSpace(20);
     doc.setFont("helvetica", "bold");
     doc.setFontSize(15);
     doc.setTextColor(15, 23, 42);
@@ -169,8 +157,6 @@ export default function ResultsDashboard({ result, scanResult, healthData, onSta
     addWrappedText(result.riskSummary, margin, contentWidth);
     y += 8;
 
-    // 3. Recommended Next Step
-    ensureSpace(15);
     doc.setFont("helvetica", "bold");
     doc.setFontSize(15);
     doc.setTextColor(15, 23, 42);
@@ -182,7 +168,6 @@ export default function ResultsDashboard({ result, scanResult, healthData, onSta
     addWrappedText(result.recommendation, margin, contentWidth);
     y += 8;
 
-    // 3.5 Care Impact Overview
     ensureSpace(30);
     doc.setFont("helvetica", "bold");
     doc.setFontSize(15);
@@ -214,9 +199,8 @@ export default function ResultsDashboard({ result, scanResult, healthData, onSta
     addBullet(`Care complexity: ${impactData.impact.complexity}`);
     y += 2;
     addBullet(`Escalation risk: ${impactData.impact.escalation}`);
-    y += 6;
+    y += 8;
 
-    // 3.6 What this could mean for you (Explanation)
     if (result.biggerPicture && result.biggerPicture.length > 0) {
       ensureSpace(15);
       doc.setFont("helvetica", "bold");
@@ -224,23 +208,17 @@ export default function ResultsDashboard({ result, scanResult, healthData, onSta
       doc.setTextColor(15, 23, 42);
       doc.text("What this could mean for you", margin, y);
       y += 8;
-
       doc.setFont("helvetica", "normal");
       doc.setFontSize(11);
-      result.biggerPicture.forEach(line => {
-        addBullet(line);
-        y += 2;
-      });
+      result.biggerPicture.forEach(line => { addBullet(line); y += 2; });
       y += 6;
     }
 
-    // 4. Summary for your GP
     ensureSpace(15);
     doc.setFont("helvetica", "bold");
     doc.setFontSize(15);
     doc.text("Summary for your GP", margin, y);
     y += 8;
-
     doc.setFontSize(11);
     const gpFields = [
       { label: "Symptoms:", value: result.selectedSymptomLabels.join(", ") },
@@ -249,103 +227,67 @@ export default function ResultsDashboard({ result, scanResult, healthData, onSta
       { label: "Risk Level:", value: result.riskLabel },
       { label: "Red Flag:", value: result.isRedFlag ? "Yes ⚠️" : "No" }
     ];
-
     gpFields.forEach(field => {
       const labelWidth = 35;
       const valMaxWidth = contentWidth - labelWidth;
       const lines = doc.splitTextToSize(field.value, valMaxWidth);
-      
       ensureSpace(Math.max(6, lines.length * 6));
-      
       doc.setFont("helvetica", "bold");
       doc.text(field.label, margin, y);
       doc.setFont("helvetica", "normal");
-      
       doc.text(lines, margin + labelWidth, y);
       y += (lines.length * 6) + 2;
     });
     y += 8;
 
-    // 5. Why Kashf suggests this
     ensureSpace(15);
     doc.setFont("helvetica", "bold");
     doc.setFontSize(15);
     doc.text("Why Kashf suggests this", margin, y);
     y += 8;
-
     doc.setFont("helvetica", "normal");
     doc.setFontSize(11);
-    result.why.forEach(line => {
-      addBullet(line);
-      y += 2;
-    });
+    result.why.forEach(line => { addBullet(line); y += 2; });
     if (scanResult && scanResult.observations.length > 0) {
       addBullet("Some facial wellness signals were noted that may be worth discussing with a clinician.");
       y += 2;
     }
     y += 8;
 
-    // 6. Questions for your GP
     ensureSpace(15);
     doc.setFont("helvetica", "bold");
     doc.setFontSize(15);
     doc.text("Questions for your GP", margin, y);
     y += 8;
-
     doc.setFont("helvetica", "normal");
     doc.setFontSize(11);
-    result.gpQuestions.forEach(q => {
-      addBullet(q);
-      y += 2;
-    });
+    result.gpQuestions.forEach(q => { addBullet(q); y += 2; });
     y += 8;
 
-    // 6.5 Facial Wellness Observations
     if (scanResult && scanResult.observations.length > 0) {
       ensureSpace(15);
       doc.setFont("helvetica", "bold");
       doc.setFontSize(15);
       doc.text("Facial Wellness Observations", margin, y);
-      
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(10);
-      doc.setTextColor(100, 116, 139);
-      doc.text(`Quality: ${scanResult.scanQuality}`, pageWidth - margin - 25, y);
-      doc.setTextColor(15, 23, 42); // Reset to navy
       y += 8;
-
       doc.setFontSize(11);
-      scanResult.observations.forEach(obs => {
-        addBullet(obs.label);
-        y += 2;
-      });
+      scanResult.observations.forEach(obs => { addBullet(obs.label); y += 2; });
       y += 4;
-      
       doc.setFont("helvetica", "italic");
       doc.setFontSize(9);
       doc.setTextColor(100, 116, 139);
-      const disclaimer = "Facial scan observations are based on visible wellness signals only. They are included to help you describe changes, not to diagnose a condition.";
+      const disclaimer = "Facial scan observations are based on visible wellness signals only.";
       addWrappedText(disclaimer, margin, contentWidth, 4);
-      doc.setTextColor(15, 23, 42); // Reset to navy
-      doc.setFont("helvetica", "normal");
+      doc.setTextColor(15, 23, 42);
       y += 4;
     }
-    
-    // 6.7 Connected Health Data
+
     if (healthData && healthData.metrics) {
       ensureSpace(35);
       doc.setFont("helvetica", "bold");
       doc.setFontSize(15);
-      doc.text("Connected Health Data", margin, y);
-      
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(10);
-      doc.setTextColor(100, 116, 139);
-      const brandName = healthData.brand.charAt(0).toUpperCase() + healthData.brand.slice(1);
-      doc.text(`Source: ${brandName} (Demo Profile)`, pageWidth - margin - 55, y);
-      doc.setTextColor(15, 23, 42);
+      doc.text("Your Health Signals", margin, y);
       y += 8;
-
       doc.setFontSize(11);
       const m = healthData.metrics;
       const metrics = [
@@ -356,7 +298,6 @@ export default function ResultsDashboard({ result, scanResult, healthData, onSta
         { label: "HRV:", value: m.hrv },
         { label: "Steps Today:", value: m.steps }
       ];
-
       metrics.forEach(item => {
         ensureSpace(6);
         doc.setFont("helvetica", "bold");
@@ -368,17 +309,15 @@ export default function ResultsDashboard({ result, scanResult, healthData, onSta
       y += 8;
     }
 
-    // 7. Safety Guidance
     ensureSpace(25);
     doc.setFont("helvetica", "bold");
     doc.setFontSize(12);
-    doc.setTextColor(153, 27, 27); // Dark red
+    doc.setTextColor(153, 27, 27);
     doc.text("Safety Guidance", margin, y);
     y += 8;
-
     doc.setFont("helvetica", "normal");
     doc.setFontSize(10);
-    const safetyText = "This is not a medical diagnosis. If your symptoms are severe, sudden, worsening, or you are worried, seek medical advice. If you experience chest pain, difficulty breathing, or signs of stroke, call 999 or go to A&E.";
+    const safetyText = "This is not a medical diagnosis. If your symptoms are severe, seek medical advice.";
     addWrappedText(safetyText, margin, contentWidth, 5);
 
     doc.save("kashf-report.pdf");
@@ -411,13 +350,13 @@ export default function ResultsDashboard({ result, scanResult, healthData, onSta
             <HealthMetricCard 
               icon="❤️" 
               label="Heart Rate" 
-              value={`${healthData.metrics.heartRate}`} 
+              value={healthData.metrics.heartRate} 
               status={getHealthStatus('Heart Rate', healthData.metrics.heartRate)} 
             />
             <HealthMetricCard 
               icon="😴" 
               label="Sleep" 
-              value={`${healthData.metrics.sleep}`} 
+              value={healthData.metrics.sleep} 
               status={getHealthStatus('Sleep', healthData.metrics.sleep)} 
             />
             <div style={{...styles.healthMetricCard, gridColumn: 'span 2'}}>
@@ -442,33 +381,15 @@ export default function ResultsDashboard({ result, scanResult, healthData, onSta
                 </div>
               )}
             </div>
-            <HealthMetricCard 
-              icon="🏃" 
-              label="Activity" 
-              value={healthData.metrics.activity} 
-              badge={true}
-            />
-            <HealthMetricCard 
-              icon="📊" 
-              label="HRV" 
-              value={healthData.metrics.hrv} 
-              status={getHealthStatus('HRV', healthData.metrics.hrv)}
-              sub="Heart Rate Variability"
-            />
-            <HealthMetricCard 
-              icon="👟" 
-              label="Steps" 
-              value={healthData.metrics.steps} 
-              status={getHealthStatus('Steps', healthData.metrics.steps)}
-            />
+            <HealthMetricCard icon="🏃" label="Activity" value={healthData.metrics.activity} badge={true} />
+            <HealthMetricCard icon="📊" label="HRV" value={healthData.metrics.hrv} status={getHealthStatus('HRV', healthData.metrics.hrv)} sub="Heart Rate Variability" />
+            <HealthMetricCard icon="👟" label="Steps" value={healthData.metrics.steps} status={getHealthStatus('Steps', healthData.metrics.steps)} />
           </div>
 
           {aiInsight && (
             <div style={{ padding: '16px', backgroundColor: '#F0F9FF', borderRadius: '12px', borderLeft: '4px solid #0EA5E9', display: 'flex', gap: '12px', alignItems: 'center' }}>
               <span style={{ fontSize: '18px' }}>💡</span>
-              <p style={{ fontSize: '13px', color: '#0369A1', margin: 0, lineHeight: '1.5', fontWeight: 500 }}>
-                {aiInsight}
-              </p>
+              <p style={{ fontSize: '13px', color: '#0369A1', margin: 0, lineHeight: '1.5', fontWeight: 500 }}>{aiInsight}</p>
             </div>
           )}
         </div>
@@ -485,222 +406,161 @@ export default function ResultsDashboard({ result, scanResult, healthData, onSta
       {/* 3. Care Impact Overview */}
       <div style={styles.card}>
         <h3 style={styles.cardTitle}>Care Impact Overview</h3>
-        <p style={{fontSize: '14px', color: '#64748B', marginBottom: '20px', marginTop: '4px'}}>
-          Understanding the real-world impact of your care timeline.
-        </p>
-        
+        <p style={{fontSize: '14px', color: '#64748B', marginBottom: '20px', marginTop: '4px'}}>Understanding the real-world impact of your care timeline.</p>
         <div style={styles.comparisonGrid}>
           <div style={styles.comparisonColumn}>
             <span style={{...styles.comparisonTitle, color: '#15803D', background: '#DCFCE7'}}>If you act now</span>
             <ul style={styles.list}>
-              {impactData.actNow.map((item, i) => (
-                <li key={i} style={{...styles.listItem, fontSize: '13px'}}>{item}</li>
-              ))}
+              {impactData.actNow.map((item, i) => <li key={i} style={{...styles.listItem, fontSize: '13px'}}>{item}</li>)}
             </ul>
           </div>
           <div style={styles.comparisonColumn}>
             <span style={{...styles.comparisonTitle, color: '#B91C1C', background: '#FEE2E2'}}>If delayed</span>
             <ul style={styles.list}>
-              {impactData.delayed.map((item, i) => (
-                <li key={i} style={{...styles.listItem, fontSize: '13px'}}>{item}</li>
-              ))}
+              {impactData.delayed.map((item, i) => <li key={i} style={{...styles.listItem, fontSize: '13px'}}>{item}</li>)}
             </ul>
           </div>
         </div>
-
         <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid #E2E8F0' }}>
           <h4 style={{ margin: '0 0 12px 0', fontSize: '14px', color: '#0F172A' }}>Estimated impact</h4>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px', background: '#F8FAFC', borderRadius: '8px' }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-              <div>
-                <div style={{ fontSize: '11px', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.025em' }}>Time</div>
-                <div style={{ fontSize: '14px', color: '#0F172A', fontWeight: 600 }}>{impactData.impact.time}</div>
-              </div>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px', background: '#F8FAFC', borderRadius: '8px' }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-              <div>
-                <div style={{ fontSize: '11px', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.025em' }}>Care</div>
-                <div style={{ fontSize: '14px', color: '#0F172A', fontWeight: 600 }}>{impactData.impact.complexity}</div>
-              </div>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px', background: '#F8FAFC', borderRadius: '8px' }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-              <div>
-                <div style={{ fontSize: '11px', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.025em' }}>Risk</div>
-                <div style={{ fontSize: '14px', color: '#0F172A', fontWeight: 600 }}>{impactData.impact.escalation}</div>
-              </div>
-            </div>
+            <ImpactMetric icon="clock" label="Time" value={impactData.impact.time} />
+            <ImpactMetric icon="pulse" label="Care" value={impactData.impact.complexity} />
+            <ImpactMetric icon="alert" label="Risk" value={impactData.impact.escalation} />
           </div>
         </div>
       </div>
 
-      {/* 3. Why Kashf suggests this */}
+      {/* 4. Why Kashf suggests this */}
       <div style={styles.card}>
         <h3 style={styles.cardTitle}>Why Kashf suggests this</h3>
         <ul style={styles.list}>
-          {result.why.map((item, index) => (
-            <li key={index} style={styles.listItem}>{item}</li>
-          ))}
-          {scanResult && scanResult.observations.length > 0 && (
-            <li style={styles.listItem}>
-              Some facial wellness signals were noted that may be worth discussing with a clinician.
-            </li>
-          )}
+          {result.why.map((item, index) => <li key={index} style={styles.listItem}>{item}</li>)}
+          {scanResult && scanResult.observations.length > 0 && <li style={styles.listItem}>Some facial wellness signals were noted that may be worth discussing with a clinician.</li>}
         </ul>
       </div>
 
-      {/* 4. What this could mean for you */}
+      {/* 5. What this could mean for you */}
       <div style={styles.card}>
         <h3 style={styles.cardTitle}>What this could mean for you</h3>
         <ul style={styles.list}>
-          {result.biggerPicture.map((item, index) => (
-            <li key={index} style={styles.listItem}>{item}</li>
-          ))}
+          {result.biggerPicture.map((item, index) => <li key={index} style={styles.listItem}>{item}</li>)}
         </ul>
       </div>
 
-      {/* 5. Summary for your GP */}
+      {/* 6. Summary for your GP */}
       <div style={{...styles.card, background: '#F8FAFC'}}>
         <h3 style={styles.cardTitle}>Summary for your GP</h3>
         <div style={styles.gpSummaryGrid}>
-          <div style={styles.gpItem}>
-            <span style={styles.gpLabel}>Symptoms:</span>
-            <span style={styles.gpValue}>{result.selectedSymptomLabels.join(", ")}</span>
-          </div>
-          <div style={styles.gpItem}>
-            <span style={styles.gpLabel}>Severity:</span>
-            <span style={styles.gpValue}>{result.severity}</span>
-          </div>
-          <div style={styles.gpItem}>
-            <span style={styles.gpLabel}>Duration:</span>
-            <span style={styles.gpValue}>{result.duration || 'Not specified'}</span>
-          </div>
-          <div style={styles.gpItem}>
-            <span style={styles.gpLabel}>Risk Level:</span>
-            <span style={styles.gpValue}>{result.riskLabel}</span>
-          </div>
-          <div style={styles.gpItem}>
-            <span style={styles.gpLabel}>Red Flag Detected:</span>
-            <span style={{...styles.gpValue, color: result.isRedFlag ? '#EF4444' : '#22C55E', fontWeight: 'bold'}}>
-              {result.isRedFlag ? 'Yes ⚠️' : 'No'}
-            </span>
-          </div>
+          <GPItem label="Symptoms" value={result.selectedSymptomLabels.join(", ")} />
+          <GPItem label="Severity" value={result.severity} />
+          <GPItem label="Duration" value={result.duration || 'Not specified'} />
+          <GPItem label="Risk Level" value={result.riskLabel} />
+          <GPItem label="Red Flag" value={result.isRedFlag ? 'Yes ⚠️' : 'No'} isAlert={result.isRedFlag} />
         </div>
       </div>
 
-      {/* 6. Questions to ask your GP */}
+      {/* 7. Questions to ask your GP */}
       <div style={styles.card}>
         <h3 style={styles.cardTitle}>Questions to ask your GP</h3>
         <ul style={styles.list}>
-          {result.gpQuestions.map((item, index) => (
-            <li key={index} style={styles.listItem}>{item}</li>
-          ))}
+          {result.gpQuestions.map((item, index) => <li key={index} style={styles.listItem}>{item}</li>)}
         </ul>
       </div>
 
-      {/* 6.5 Facial Wellness Observations */}
+      {/* 8. Facial Wellness Observations */}
       {scanResult && scanResult.observations.length > 0 && (
-        <div style={styles.card}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
-            <h3 style={{...styles.cardTitle, color: '#2F6FED', margin: 0}}>Facial wellness observations</h3>
-            <span style={{ fontSize: '12px', fontWeight: 600, padding: '4px 8px', borderRadius: '4px', backgroundColor: '#F1F5F9', color: '#475569' }}>
-              Quality: {scanResult.scanQuality}
-            </span>
+        <div style={{...styles.card, borderLeft: '4px solid #60A5FA'}}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+            <h3 style={styles.cardTitle}>Facial wellness observations</h3>
+            <span style={{fontSize: '12px', color: '#64748B', fontWeight: 600}}>Scan quality: {scanResult.scanQuality}</span>
           </div>
-          <p style={{fontSize: '14px', color: '#334155', marginBottom: '12px', marginTop: 0}}>
-            Kashf noticed the following visible wellness signals:
-          </p>
-          <ul style={{...styles.list, marginTop: 0}}>
-            {scanResult.observations.map((obs, index) => (
-              <li key={index} style={{...styles.listItem, color: '#0F172A', fontWeight: 500}}>{obs.label}</li>
-            ))}
+          <p style={{fontSize: '14px', color: '#475569', marginBottom: '16px'}}>Kashf noticed the following visible wellness signals:</p>
+          <ul style={styles.list}>
+            {scanResult.observations.map((obs, i) => <li key={i} style={styles.listItem}>{obs.label}</li>)}
           </ul>
-          <p style={{fontSize: '14px', color: '#334155', marginTop: '12px', marginBottom: 0}}>
-            These may help you describe your symptoms more clearly when speaking to a GP.
-          </p>
-          <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #E2E8F0' }}>
-            <p style={{fontSize: '13px', color: '#64748B', margin: 0}}>
-              Facial scan observations are based on visible wellness signals only. They are included to help you describe changes, not to diagnose a condition.
-            </p>
-          </div>
+          <p style={{fontSize: '13px', color: '#64748B', marginTop: '16px', fontStyle: 'italic'}}>These are visible wellness signals only and not a medical diagnosis.</p>
         </div>
       )}
 
-
-
-      {/* 7. Safety Guidance */}
+      {/* 9. Safety Guidance */}
       <div style={styles.safetyCard}>
         <h3 style={{...styles.cardTitle, color: '#991B1B', marginBottom: '8px'}}>Safety Guidance</h3>
-        <p style={{fontSize: '14px', color: '#991B1B', marginBottom: '8px'}}>
-          <strong>This is not a medical diagnosis.</strong>
-        </p>
-        <p style={{fontSize: '14px', color: '#991B1B'}}>
-          If symptoms are severe, sudden, worsening, or you are worried, seek medical advice immediately.
-        </p>
+        <p style={{fontSize: '14px', color: '#991B1B'}}>If symptoms are severe, seek medical advice immediately. Call 999 in an emergency.</p>
       </div>
 
-      {/* 8. Actions */}
+      {/* 10. Actions */}
       <div style={{ display: 'flex', gap: '12px', flexDirection: 'column' }}>
         <div style={styles.actionGroup}>
-          <button style={styles.secondaryButton} onClick={downloadPDF}>
-            Download PDF Report ↓
-          </button>
-          <button style={styles.button} onClick={onStartAgain}>
-            Start another check
-          </button>
+          <button style={styles.secondaryButton} onClick={downloadPDF}>Download PDF Report ↓</button>
+          <button style={styles.button} onClick={onStartAgain}>Start another check</button>
         </div>
         {onRescanFace && (
-          <button 
-            style={{
-              ...styles.secondaryButton, 
-              alignSelf: 'center', 
-              background: 'transparent', 
-              border: '1px solid #CBD5E1', 
-              color: '#475569',
-              padding: '10px 24px',
-              marginTop: '4px'
-            }} 
-            onClick={onRescanFace}
-          >
-            Rescan Face
-          </button>
+          <button style={styles.rescanButton} onClick={onRescanFace}>Rescan Face</button>
         )}
       </div>
     </div>
   );
 }
 
+function ImpactMetric({ icon, label, value }: { icon: string; label: string; value: string }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px', background: '#F8FAFC', borderRadius: '8px' }}>
+      <div style={{ fontSize: '14px', color: '#64748B' }}>{icon === 'clock' ? '🕒' : icon === 'pulse' ? '📈' : '⚠️'}</div>
+      <div>
+        <div style={{ fontSize: '11px', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.025em' }}>{label}</div>
+        <div style={{ fontSize: '14px', color: '#0F172A', fontWeight: 600 }}>{value}</div>
+      </div>
+    </div>
+  );
+}
+
+function GPItem({ label, value, isAlert }: { label: string; value: string; isAlert?: boolean }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', padding: '4px 0' }}>
+      <span style={{ fontSize: '14px', color: '#64748B', fontWeight: 600 }}>{label}:</span>
+      <span style={{ fontSize: '14px', fontWeight: '500', color: isAlert ? '#EF4444' : '#0F172A', textAlign: 'right', maxWidth: '60%' }}>{value}</span>
+    </div>
+  );
+}
+
+function HealthMetricCard({ icon, label, value, status, badge, sub }: { icon: string; label: string; value: string; status?: any; badge?: boolean; sub?: string }) {
+  return (
+    <div style={styles.healthMetricCard}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+        <span style={{ fontSize: '18px' }}>{icon}</span>
+        <span style={styles.healthMetricLabel}>{label}</span>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+        <span style={styles.healthMetricValue}>{value}</span>
+        {badge && <span style={styles.miniBadge}>{value}</span>}
+      </div>
+      {sub && <div style={{ fontSize: '10px', color: '#94A3B8', marginTop: '2px' }}>{sub}</div>}
+      {status && (
+        <div style={{ fontSize: '11px', color: status.color, fontWeight: 600, marginTop: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+          <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: status.color }} />
+          {status.text}
+        </div>
+      )}
+    </div>
+  );
+}
+
 const styles = {
-  colors: {
-    navy: '#0F172A',
-    blue: '#2F6FED',
-    softBlue: '#60A5FA',
-    bg: '#F5F7FB',
-    card: '#FFFFFF',
-    muted: '#64748B',
-    urgent: '#EF4444',
-    moderate: '#F59E0B',
-    low: '#22C55E',
-  },
   container: {
-    width: "100%",
-    maxWidth: "800px",
-    margin: "0 auto",
-    padding: "20px",
-    display: "flex",
-    flexDirection: "column" as const,
-    gap: "24px",
-    animation: 'fadeIn 0.5s ease-out',
+    display: 'flex',
+    flexDirection: 'column' as const,
+    gap: '24px',
+    width: '100%',
+    maxWidth: '800px',
+    margin: '0 auto',
   },
   title: {
-    fontSize: "28px",
+    fontSize: "24px",
     fontWeight: "800",
     color: '#0F172A',
     textAlign: "center" as const,
     marginBottom: "8px",
-    letterSpacing: '-0.5px',
   },
   card: {
     backgroundColor: "#FFFFFF",
@@ -732,211 +592,23 @@ const styles = {
     backgroundColor: level === 'urgent' ? '#FEE2E2' : level === 'moderate' ? '#FEF3C7' : '#DCFCE7',
     color: level === 'urgent' ? '#B91C1C' : level === 'moderate' ? '#92400E' : '#15803D',
   }),
-  summaryText: {
-    fontSize: '16px',
-    lineHeight: '1.6',
-    color: '#334155',
-    margin: 0,
-  },
-  nextStepBox: {
-    marginTop: '12px',
-    padding: '16px',
-    background: '#F1F5F9',
-    borderRadius: '12px',
-    borderLeft: '4px solid #2F6FED',
-  },
-  nextStepText: {
-    fontSize: '16px',
-    fontWeight: '600',
-    color: '#0F172A',
-    margin: 0,
-  },
-  list: {
-    marginTop: '12px',
-    paddingLeft: '20px',
-    margin: 0,
-  },
-  listItem: {
-    fontSize: '15px',
-    lineHeight: '1.6',
-    color: '#475569',
-    marginBottom: '8px',
-  },
-  gpSummaryGrid: {
-    display: 'flex',
-    flexDirection: 'column' as const,
-    gap: '12px',
-    marginTop: '16px',
-  },
-  gpItem: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    borderBottom: '1px solid #E2E8F0',
-    paddingBottom: '8px',
-  },
-  gpLabel: {
-    fontSize: '14px',
-    fontWeight: '600',
-    color: '#64748B',
-  },
-  gpValue: {
-    fontSize: '14px',
-    fontWeight: '500',
-    color: '#0F172A',
-    textAlign: 'right' as const,
-    maxWidth: '60%',
-  },
-  safetyCard: {
-    backgroundColor: "#FEF2F2",
-    borderRadius: "16px",
-    padding: "24px",
-    border: "1.5px solid #FECACA",
-  },
-  button: {
-    alignSelf: "center" as const,
-    padding: "16px 32px",
-    borderRadius: "12px",
-    border: "none",
-    backgroundColor: "#0F172A",
-    color: "#FFFFFF",
-    fontSize: "16px",
-    fontWeight: "700",
-    cursor: "pointer",
-    boxShadow: "0 10px 20px rgba(15, 23, 42, 0.2)",
-    transition: 'all 0.2s',
-  },
-  actionGroup: {
-    display: 'flex',
-    flexDirection: 'column' as const,
-    gap: '12px',
-    alignItems: 'center',
-    marginTop: '20px',
-  },
-  secondaryButton: {
-    padding: "12px 24px",
-    borderRadius: "12px",
-    border: "1.5px solid #0F172A",
-    backgroundColor: "transparent",
-    color: "#0F172A",
-    fontSize: "15px",
-    fontWeight: "600",
-    cursor: "pointer",
-    transition: 'all 0.2s',
-    width: '100%',
-    width: '100%',
-    maxWidth: '320px',
-  },
-  metricRow: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: '12px',
-    gap: '12px',
-  },
-  metricLabel: {
-    fontSize: '14px',
-    fontWeight: '600',
-    color: '#0F172A',
-    width: '100px',
-  },
-  metricBarContainer: {
-    display: 'flex',
-    gap: '4px',
-    flex: 1,
-  },
-  metricBar: {
-    height: '6px',
-    flex: 1,
-    borderRadius: '3px',
-  },
-  metricValue: {
-    fontSize: '12px',
-    fontWeight: '700',
-    width: '60px',
-    textAlign: 'right' as const,
-  },
-  metricsContainer: {
-    marginBottom: '24px',
-  },
-  comparisonGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-    gap: '16px',
-    marginTop: '20px',
-    paddingTop: '20px',
-    borderTop: '1px solid #E2E8F0',
-  },
-  comparisonColumn: {
-    display: 'flex',
-    flexDirection: 'column' as const,
-  },
-  comparisonTitle: {
-    fontSize: '12px',
-    fontWeight: '800',
-    padding: '4px 10px',
-    borderRadius: '6px',
-    alignSelf: 'flex-start',
-    marginBottom: '8px',
-    textTransform: 'uppercase' as const,
-  },
-  healthMetricLabel: {
-    fontSize: '11px',
-    color: '#64748B',
-    fontWeight: 600,
-    textTransform: 'uppercase' as const,
-    letterSpacing: '0.05em',
-  },
-  healthMetricValue: {
-    fontSize: '18px',
-    fontWeight: '800',
-    color: '#0F172A',
-  },
-  healthMetricCard: {
-    padding: '16px',
-    backgroundColor: '#F8FAFC',
-    borderRadius: '12px',
-    border: '1px solid #F1F5F9'
-  }
+  summaryText: { fontSize: '16px', lineHeight: '1.6', color: '#334155', margin: 0 },
+  nextStepBox: { marginTop: '12px', padding: '16px', background: '#F1F5F9', borderRadius: '12px', borderLeft: '4px solid #2F6FED' },
+  nextStepText: { fontSize: '16px', fontWeight: '600', color: '#0F172A', margin: 0 },
+  list: { listStyle: "none", padding: 0, margin: 0 },
+  listItem: { position: "relative" as const, paddingLeft: "20px", marginBottom: "8px", fontSize: "14px", color: "#475569" },
+  comparisonGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginTop: '20px', paddingTop: '20px', borderTop: '1px solid #E2E8F0' },
+  comparisonColumn: { display: 'flex', flexDirection: 'column' as const },
+  comparisonTitle: { fontSize: '12px', fontWeight: '800', padding: '4px 10px', borderRadius: '6px', alignSelf: 'flex-start', marginBottom: '8px', textTransform: 'uppercase' as const },
+  healthMetricCard: { padding: '16px', backgroundColor: '#F8FAFC', borderRadius: '12px', border: '1px solid #F1F5F9' },
+  healthMetricLabel: { fontSize: '11px', color: '#64748B', fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.05em' },
+  healthMetricValue: { fontSize: '18px', fontWeight: '800', color: '#0F172A' },
+  miniBadge: { fontSize: '10px', padding: '2px 6px', borderRadius: '4px', backgroundColor: '#E0F2FE', color: '#0369A1', fontWeight: 700, textTransform: 'uppercase' as const },
+  gpSummaryGrid: { display: 'flex', flexDirection: 'column' as const, gap: '4px' },
+  safetyCard: { backgroundColor: "#FEF2F2", borderRadius: "16px", padding: "24px", border: "1.5px solid #FECACA" },
+  button: { padding: "16px 32px", borderRadius: "12px", border: "none", backgroundColor: "#0F172A", color: "#FFFFFF", fontSize: "16px", fontWeight: "700", cursor: "pointer", boxShadow: "0 10px 20px rgba(15, 23, 42, 0.2)", transition: 'all 0.2s' },
+  secondaryButton: { padding: "12px 24px", borderRadius: "12px", border: "1.5px solid #0F172A", backgroundColor: "transparent", color: "#0F172A", fontSize: "15px", fontWeight: "600", cursor: "pointer", transition: 'all 0.2s', width: '100%', maxWidth: '320px' },
+  actionGroup: { display: 'flex', flexDirection: 'column' as const, gap: '12px', alignItems: 'center', marginTop: '20px' },
+  rescanButton: { background: 'transparent', border: '1px solid #CBD5E1', color: '#475569', padding: '10px 24px', marginTop: '4px', borderRadius: '12px', cursor: 'pointer', alignSelf: 'center' },
+  colors: { low: '#22C55E', moderate: '#F59E0B', urgent: '#EF4444' }
 };
-
-function HealthMetricCard({ icon, label, value, status, badge, sub }: { icon: string; label: string; value: string; status?: any; badge?: boolean; sub?: string }) {
-  return (
-    <div style={styles.healthMetricCard}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-        <span style={{ fontSize: '18px' }}>{icon}</span>
-        <span style={styles.healthMetricLabel}>{label}</span>
-      </div>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
-        <span style={styles.healthMetricValue}>{value}</span>
-        {badge && (
-          <span style={{ 
-            fontSize: '10px', 
-            padding: '2px 6px', 
-            borderRadius: '4px', 
-            backgroundColor: '#E0F2FE', 
-            color: '#0369A1', 
-            fontWeight: 700,
-            textTransform: 'uppercase'
-          }}>
-            {value}
-          </span>
-        )}
-      </div>
-      {sub && <div style={{ fontSize: '10px', color: '#94A3B8', marginTop: '2px' }}>{sub}</div>}
-      {status && (
-        <div style={{ 
-          fontSize: '11px', 
-          color: status.color, 
-          fontWeight: 600, 
-          marginTop: '6px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '4px'
-        }}>
-          <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: status.color }} />
-          {status.text}
-        </div>
-      )}
-    </div>
-  );
-}
