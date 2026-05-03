@@ -1,19 +1,54 @@
 import type { AppLanguage } from "../types/language";
+import { languageLabels } from "../types/language";
 
 const dictionary: Record<Exclude<AppLanguage, "en">, Record<string, string>> = {
   ar: {
-    "This is not a medical diagnosis.": "هذه ليست تشخيصا طبيا.",
+    "This is not a medical diagnosis.": "هذا ليس تشخيصا طبيا.",
     "If symptoms are severe, sudden, worsening, or you are worried, seek medical advice.": "إذا كانت الأعراض شديدة أو مفاجئة أو تزداد سوءا أو كنت قلقا، فاطلب المشورة الطبية.",
     "Call 999 or go to A&E now if symptoms are severe, sudden, or worsening.": "اتصل بالرقم 999 أو اذهب إلى قسم الطوارئ الآن إذا كانت الأعراض شديدة أو مفاجئة أو تزداد سوءا.",
     "Consider contacting your GP or NHS 111, especially if symptoms continue or worsen.": "فكر في التواصل مع طبيبك العام أو NHS 111، خاصة إذا استمرت الأعراض أو ساءت.",
     "Monitor your symptoms and consider a pharmacist, GP, or NHS 111 if you are unsure or symptoms change.": "راقب أعراضك وفكر في استشارة صيدلي أو طبيب عام أو NHS 111 إذا لم تكن متأكدا أو تغيرت الأعراض.",
+    "What should I do next?": "ماذا يجب أن أفعل بعد ذلك؟",
+    "What should I tell my GP?": "ماذا يجب أن أخبر طبيبي العام؟",
+    "How does my health data affect this?": "كيف تؤثر بياناتي الصحية على ذلك؟",
+    "Ask about your result": "اسأل عن نتيجتك",
+    "Ask a follow-up...": "اسأل سؤال متابعة...",
+    "Send": "إرسال",
+    "Thinking across your result...": "أراجع نتيجتك...",
+    "Ask Kashf": "اسأل كاشف",
+    "Kashf assistant": "مساعد كاشف",
+    "Replying in": "يرد باللغة",
+    "Health data linked": "تم ربط بيانات الصحة",
+    "No health data": "لا توجد بيانات صحية",
+    "Face scan linked": "تم ربط فحص الوجه",
+    "No face scan": "لا يوجد فحص وجه",
+    "Guidance only. For urgent symptoms, call 999 or go to A&E.": "إرشادات فقط. عند الأعراض العاجلة، اتصل بالرقم 999 أو اذهب إلى قسم الطوارئ.",
+    "I can help explain this result using your symptoms, connected health data, and facial wellness scan context. I cannot diagnose, but I can help you prepare next steps.": "يمكنني مساعدتك في فهم هذه النتيجة باستخدام أعراضك وبياناتك الصحية وفحص الوجه كإطار داعم. لا أستطيع التشخيص، لكن يمكنني مساعدتك في التحضير للخطوات التالية.",
+    "I could not generate a tailored reply just now. Please use the assessment cards and NHS links above for the next step.": "لم أتمكن من إنشاء رد مخصص الآن. يرجى استخدام بطاقات التقييم وروابط NHS أعلاه لمعرفة الخطوة التالية.",
   },
   fr: {
     "This is not a medical diagnosis.": "Ceci n'est pas un diagnostic médical.",
     "If symptoms are severe, sudden, worsening, or you are worried, seek medical advice.": "Si les symptômes sont graves, soudains, s'aggravent ou vous inquiètent, demandez un avis médical.",
     "Call 999 or go to A&E now if symptoms are severe, sudden, or worsening.": "Appelez le 999 ou allez aux urgences maintenant si les symptômes sont graves, soudains ou s'aggravent.",
     "Consider contacting your GP or NHS 111, especially if symptoms continue or worsen.": "Envisagez de contacter votre médecin généraliste ou NHS 111, surtout si les symptômes persistent ou s'aggravent.",
-    "Monitor your symptoms and consider a pharmacist, GP, or NHS 111 if you are unsure or symptoms change.": "Surveillez vos symptômes et envisagez un pharmacien, un médecin généraliste ou NHS 111 si vous avez un doute ou si les symptômes changent.",
+    "Monitor your symptoms and consider a pharmacist, GP, or NHS 111 if you are unsure or symptoms change.": "Surveillez vos symptômes et envisagez de consulter un pharmacien, un médecin généraliste ou NHS 111 si vous avez un doute ou si les symptômes changent.",
+    "What should I do next?": "Que dois-je faire ensuite ?",
+    "What should I tell my GP?": "Que dois-je dire à mon médecin généraliste ?",
+    "How does my health data affect this?": "Comment mes données de santé influencent-elles cela ?",
+    "Ask about your result": "Posez une question sur votre résultat",
+    "Ask a follow-up...": "Posez une question de suivi...",
+    "Send": "Envoyer",
+    "Thinking across your result...": "Analyse de votre résultat...",
+    "Ask Kashf": "Demander à Kashf",
+    "Kashf assistant": "Assistant Kashf",
+    "Replying in": "Réponse en",
+    "Health data linked": "Données de santé liées",
+    "No health data": "Aucune donnée de santé",
+    "Face scan linked": "Scan du visage lié",
+    "No face scan": "Aucun scan du visage",
+    "Guidance only. For urgent symptoms, call 999 or go to A&E.": "Conseils uniquement. En cas de symptômes urgents, appelez le 999 ou allez aux urgences.",
+    "I can help explain this result using your symptoms, connected health data, and facial wellness scan context. I cannot diagnose, but I can help you prepare next steps.": "Je peux vous aider à comprendre ce résultat à partir de vos symptômes, de vos données de santé connectées et du scan facial comme contexte de bien-être. Je ne peux pas diagnostiquer, mais je peux vous aider à préparer les prochaines étapes.",
+    "I could not generate a tailored reply just now. Please use the assessment cards and NHS links above for the next step.": "Je n'ai pas pu générer de réponse personnalisée pour le moment. Utilisez les cartes d'évaluation et les liens NHS ci-dessus pour la prochaine étape.",
   },
   es: {
     "This is not a medical diagnosis.": "Esto no es un diagnóstico médico.",
@@ -21,34 +56,84 @@ const dictionary: Record<Exclude<AppLanguage, "en">, Record<string, string>> = {
     "Call 999 or go to A&E now if symptoms are severe, sudden, or worsening.": "Llama al 999 o acude a urgencias ahora si los síntomas son graves, repentinos o empeoran.",
     "Consider contacting your GP or NHS 111, especially if symptoms continue or worsen.": "Considera contactar con tu médico de cabecera o NHS 111, especialmente si los síntomas continúan o empeoran.",
     "Monitor your symptoms and consider a pharmacist, GP, or NHS 111 if you are unsure or symptoms change.": "Controla tus síntomas y considera consultar a un farmacéutico, médico de cabecera o NHS 111 si no estás seguro o los síntomas cambian.",
+    "What should I do next?": "¿Qué debo hacer ahora?",
+    "What should I tell my GP?": "¿Qué debo decirle a mi médico de cabecera?",
+    "How does my health data affect this?": "¿Cómo influyen mis datos de salud en esto?",
+    "Ask about your result": "Pregunta sobre tu resultado",
+    "Ask a follow-up...": "Haz una pregunta de seguimiento...",
+    "Send": "Enviar",
+    "Thinking across your result...": "Analizando tu resultado...",
+    "Ask Kashf": "Preguntar a Kashf",
+    "Kashf assistant": "Asistente de Kashf",
+    "Replying in": "Respondiendo en",
+    "Health data linked": "Datos de salud vinculados",
+    "No health data": "Sin datos de salud",
+    "Face scan linked": "Escaneo facial vinculado",
+    "No face scan": "Sin escaneo facial",
+    "Guidance only. For urgent symptoms, call 999 or go to A&E.": "Solo orientación. Si hay síntomas urgentes, llama al 999 o acude a urgencias.",
+    "I can help explain this result using your symptoms, connected health data, and facial wellness scan context. I cannot diagnose, but I can help you prepare next steps.": "Puedo ayudarte a entender este resultado usando tus síntomas, tus datos de salud conectados y el escaneo facial como contexto de bienestar. No puedo diagnosticar, pero puedo ayudarte a preparar los próximos pasos.",
+    "I could not generate a tailored reply just now. Please use the assessment cards and NHS links above for the next step.": "No he podido generar una respuesta personalizada ahora mismo. Usa las tarjetas de evaluación y los enlaces del NHS de arriba para ver el siguiente paso.",
   },
   zh: {
     "This is not a medical diagnosis.": "这不是医学诊断。",
-    "If symptoms are severe, sudden, worsening, or you are worried, seek medical advice.": "如果症状严重、突然、恶化，或你感到担心，请寻求医疗建议。",
-    "Call 999 or go to A&E now if symptoms are severe, sudden, or worsening.": "如果症状严重、突然或恶化，请立即拨打999或前往急诊。",
-    "Consider contacting your GP or NHS 111, especially if symptoms continue or worsen.": "如果症状持续或恶化，请考虑联系全科医生或NHS 111。",
-    "Monitor your symptoms and consider a pharmacist, GP, or NHS 111 if you are unsure or symptoms change.": "请观察症状；如果不确定或症状变化，可咨询药剂师、全科医生或NHS 111。",
+    "If symptoms are severe, sudden, worsening, or you are worried, seek medical advice.": "如果症状严重、突然、加重，或你感到担心，请寻求医疗建议。",
+    "Call 999 or go to A&E now if symptoms are severe, sudden, or worsening.": "如果症状严重、突然或加重，请立即拨打 999 或前往急诊。",
+    "Consider contacting your GP or NHS 111, especially if symptoms continue or worsen.": "如果症状持续或加重，请考虑联系全科医生或 NHS 111。",
+    "Monitor your symptoms and consider a pharmacist, GP, or NHS 111 if you are unsure or symptoms change.": "请观察症状；如果不确定或症状发生变化，可咨询药剂师、全科医生或 NHS 111。",
+    "What should I do next?": "我接下来应该怎么做？",
+    "What should I tell my GP?": "我应该告诉全科医生什么？",
+    "How does my health data affect this?": "我的健康数据会如何影响这个结果？",
+    "Ask about your result": "询问你的结果",
+    "Ask a follow-up...": "提出后续问题...",
+    "Send": "发送",
+    "Thinking across your result...": "正在分析你的结果...",
+    "Ask Kashf": "询问 Kashf",
+    "Kashf assistant": "Kashf 助手",
+    "Replying in": "回复语言",
+    "Health data linked": "已连接健康数据",
+    "No health data": "没有健康数据",
+    "Face scan linked": "已连接面部扫描",
+    "No face scan": "没有面部扫描",
+    "Guidance only. For urgent symptoms, call 999 or go to A&E.": "仅供参考。如有紧急症状，请拨打 999 或前往急诊。",
+    "I can help explain this result using your symptoms, connected health data, and facial wellness scan context. I cannot diagnose, but I can help you prepare next steps.": "我可以结合你的症状、已连接的健康数据和面部健康扫描背景，帮助解释这个结果。我不能做诊断，但可以帮助你准备下一步。",
+    "I could not generate a tailored reply just now. Please use the assessment cards and NHS links above for the next step.": "我现在无法生成个性化回复。请使用上方的评估卡片和 NHS 链接查看下一步。",
   },
   pa: {
     "This is not a medical diagnosis.": "ਇਹ ਕੋਈ ਡਾਕਟਰੀ ਤਸ਼ਖੀਸ ਨਹੀਂ ਹੈ।",
     "If symptoms are severe, sudden, worsening, or you are worried, seek medical advice.": "ਜੇ ਲੱਛਣ ਗੰਭੀਰ, ਅਚਾਨਕ, ਵਧ ਰਹੇ ਹਨ ਜਾਂ ਤੁਸੀਂ ਚਿੰਤਤ ਹੋ, ਤਾਂ ਡਾਕਟਰੀ ਸਲਾਹ ਲਵੋ।",
     "Call 999 or go to A&E now if symptoms are severe, sudden, or worsening.": "ਜੇ ਲੱਛਣ ਗੰਭੀਰ, ਅਚਾਨਕ ਜਾਂ ਵਧ ਰਹੇ ਹਨ, ਤਾਂ ਹੁਣੇ 999 ਤੇ ਕਾਲ ਕਰੋ ਜਾਂ A&E ਜਾਓ।",
     "Consider contacting your GP or NHS 111, especially if symptoms continue or worsen.": "ਆਪਣੇ GP ਜਾਂ NHS 111 ਨਾਲ ਸੰਪਰਕ ਕਰਨ ਬਾਰੇ ਸੋਚੋ, ਖਾਸ ਕਰਕੇ ਜੇ ਲੱਛਣ ਜਾਰੀ ਰਹਿੰਦੇ ਜਾਂ ਵਧਦੇ ਹਨ।",
-    "Monitor your symptoms and consider a pharmacist, GP, or NHS 111 if you are unsure or symptoms change.": "ਆਪਣੇ ਲੱਛਣਾਂ ਤੇ ਨਜ਼ਰ ਰੱਖੋ ਅਤੇ ਜੇ ਤੁਸੀਂ ਅਣਸ਼ਚਿਤ ਹੋ ਜਾਂ ਲੱਛਣ ਬਦਲਦੇ ਹਨ ਤਾਂ ਫਾਰਮਾਸਿਸਟ, GP ਜਾਂ NHS 111 ਬਾਰੇ ਸੋਚੋ।",
+    "Monitor your symptoms and consider a pharmacist, GP, or NHS 111 if you are unsure or symptoms change.": "ਆਪਣੇ ਲੱਛਣਾਂ ਤੇ ਨਜ਼ਰ ਰੱਖੋ ਅਤੇ ਜੇ ਤੁਸੀਂ ਅਣਸ਼ਚਿਤ ਹੋ ਜਾਂ ਲੱਛਣ ਬਦਲਦੇ ਹਨ ਤਾਂ ਫਾਰਮਾਸਿਸਟ, GP ਜਾਂ NHS 111 ਨਾਲ ਸੰਪਰਕ ਬਾਰੇ ਸੋਚੋ।",
+    "What should I do next?": "ਮੈਨੂੰ ਅੱਗੇ ਕੀ ਕਰਨਾ ਚਾਹੀਦਾ ਹੈ?",
+    "What should I tell my GP?": "ਮੈਨੂੰ ਆਪਣੇ GP ਨੂੰ ਕੀ ਦੱਸਣਾ ਚਾਹੀਦਾ ਹੈ?",
+    "How does my health data affect this?": "ਮੇਰਾ ਸਿਹਤ ਡਾਟਾ ਇਸ ਨੂੰ ਕਿਵੇਂ ਪ੍ਰਭਾਵਿਤ ਕਰਦਾ ਹੈ?",
+    "Ask about your result": "ਆਪਣੇ ਨਤੀਜੇ ਬਾਰੇ ਪੁੱਛੋ",
+    "Ask a follow-up...": "ਅਗਲਾ ਸਵਾਲ ਪੁੱਛੋ...",
+    "Send": "ਭੇਜੋ",
+    "Thinking across your result...": "ਤੁਹਾਡੇ ਨਤੀਜੇ ਬਾਰੇ ਸੋਚ ਰਿਹਾ ਹੈ...",
+    "Ask Kashf": "Kashf ਨੂੰ ਪੁੱਛੋ",
+    "Kashf assistant": "Kashf ਸਹਾਇਕ",
+    "Replying in": "ਇਸ ਭਾਸ਼ਾ ਵਿੱਚ ਜਵਾਬ",
+    "Health data linked": "ਸਿਹਤ ਡਾਟਾ ਜੁੜਿਆ",
+    "No health data": "ਕੋਈ ਸਿਹਤ ਡਾਟਾ ਨਹੀਂ",
+    "Face scan linked": "ਚਿਹਰਾ ਸਕੈਨ ਜੁੜਿਆ",
+    "No face scan": "ਕੋਈ ਚਿਹਰਾ ਸਕੈਨ ਨਹੀਂ",
+    "Guidance only. For urgent symptoms, call 999 or go to A&E.": "ਕੇਵਲ ਰਹਿਨੁਮਾਈ। ਤੁਰੰਤ ਲੱਛਣਾਂ ਲਈ 999 ਤੇ ਕਾਲ ਕਰੋ ਜਾਂ A&E ਜਾਓ।",
+    "I can help explain this result using your symptoms, connected health data, and facial wellness scan context. I cannot diagnose, but I can help you prepare next steps.": "ਮੈਂ ਤੁਹਾਡੇ ਲੱਛਣਾਂ, ਜੁੜੇ ਸਿਹਤ ਡਾਟੇ ਅਤੇ ਚਿਹਰੇ ਦੇ ਵੈਲਨੈੱਸ ਸਕੈਨ ਦੇ ਸੰਦਰਭ ਨਾਲ ਇਹ ਨਤੀਜਾ ਸਮਝਾਉਣ ਵਿੱਚ ਮਦਦ ਕਰ ਸਕਦਾ ਹਾਂ। ਮੈਂ ਤਸ਼ਖੀਸ ਨਹੀਂ ਕਰ ਸਕਦਾ, ਪਰ ਅਗਲੇ ਕਦਮਾਂ ਲਈ ਤਿਆਰੀ ਵਿੱਚ ਮਦਦ ਕਰ ਸਕਦਾ ਹਾਂ।",
+    "I could not generate a tailored reply just now. Please use the assessment cards and NHS links above for the next step.": "ਮੈਂ ਇਸ ਵੇਲੇ ਵਿਅਕਤੀਗਤ ਜਵਾਬ ਨਹੀਂ ਬਣਾ ਸਕਿਆ। ਅਗਲੇ ਕਦਮ ਲਈ ਉੱਪਰ ਦਿੱਤੇ ਮੁਲਾਂਕਣ ਕਾਰਡਾਂ ਅਤੇ NHS ਲਿੰਕਾਂ ਦੀ ਵਰਤੋਂ ਕਰੋ।",
   },
 };
 
 export function translateText(text: string, language: AppLanguage): string {
   if (language === "en") return text;
-  const exact = dictionary[language][text.trim()];
-  if (exact) return exact;
+  return dictionary[language][text.trim()] || text;
+}
 
-  const safety = dictionary[language]["This is not a medical diagnosis."];
-  const advice = dictionary[language]["If symptoms are severe, sudden, worsening, or you are worried, seek medical advice."];
-  return `${text}\n${safety} ${advice}`;
+export function selectedLanguageName(language: AppLanguage): string {
+  return languageLabels[language];
 }
 
 export function localisedPromptSuffix(language: AppLanguage) {
-  if (language === "en") return "Reply in English unless the user writes in another supported language.";
-  return `Reply primarily in ${language}, but you may switch language to match the user's message. Keep NHS terms such as GP, NHS 111, 999, and A&E recognizable.`;
+  const selectedLanguage = selectedLanguageName(language);
+  return `IMPORTANT: You must respond ENTIRELY and ONLY in ${selectedLanguage}. Every word of your response must be in ${selectedLanguage}. Do not mix languages. Do not include any other language in your response. Use NHS UK terms translated into ${selectedLanguage}.`;
 }

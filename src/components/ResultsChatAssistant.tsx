@@ -18,18 +18,25 @@ type Props = {
 };
 
 export default function ResultsChatAssistant({ result, scanResult, healthData, tailoredInsight, language }: Props) {
-  const quickPrompts = [
+  const isArabic = language === "ar";
+  const textDirection = isArabic ? "rtl" : "ltr";
+  const textAlign = isArabic ? "right" : "left";
+  const quickPrompts = useMemo(() => [
     translateText("What should I do next?", language),
     translateText("What should I tell my GP?", language),
     translateText("How does my health data affect this?", language),
-  ];
+  ], [language]);
+  const openingMessage = useMemo(
+    () => translateText("I can help explain this result using your symptoms, connected health data, and facial wellness scan context. I cannot diagnose, but I can help you prepare next steps.", language),
+    [language]
+  );
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState("");
   const [isThinking, setIsThinking] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>(() => [
     {
       role: "assistant",
-      content: translateText("I can help explain this result using your symptoms, connected health data, and facial wellness scan context. I cannot diagnose, but I can help you prepare next steps.", language),
+      content: openingMessage,
     },
   ]);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -62,7 +69,7 @@ export default function ResultsChatAssistant({ result, scanResult, healthData, t
         ...nextMessages,
         {
           role: "assistant",
-          content: translateText("I could not generate a tailored reply just now. The key safety point still stands: this is not a medical diagnosis, and if symptoms are severe, sudden, worsening, or worrying, seek medical advice.", language),
+          content: translateText("I could not generate a tailored reply just now. Please use the assessment cards and NHS links above for the next step.", language),
         },
       ]);
     } finally {
@@ -78,13 +85,13 @@ export default function ResultsChatAssistant({ result, scanResult, healthData, t
   return (
     <div style={styles.shell} aria-live="polite">
       {isOpen && (
-        <section style={styles.panel} aria-label="Kashf AI chat assistant">
+        <section style={{ ...styles.panel, direction: textDirection }} dir={textDirection} aria-label="Kashf AI chat assistant">
           <div style={styles.panelGlow} />
           <header style={styles.header}>
             <div>
-              <p style={styles.kicker}>Kashf assistant</p>
+              <p style={styles.kicker}>{translateText("Kashf assistant", language)}</p>
               <h3 style={styles.title}>{translateText("Ask about your result", language)}</h3>
-              <p style={styles.languageHint}>Replying in {languageLabels[language]} or matching your message.</p>
+              <p style={styles.languageHint}>{translateText("Replying in", language)} {languageLabels[language]}</p>
             </div>
             <button type="button" onClick={() => setIsOpen(false)} style={styles.closeButton} aria-label="Close assistant">
               x
@@ -97,20 +104,22 @@ export default function ResultsChatAssistant({ result, scanResult, healthData, t
             <span style={styles.contextPill}>{translateText(scanResult ? "Face scan linked" : "No face scan", language)}</span>
           </div>
 
-          <div ref={scrollRef} style={styles.messages}>
+          <div ref={scrollRef} style={{ ...styles.messages, direction: textDirection }} dir={textDirection}>
             {messages.map((message, index) => (
               <div
                 key={`${message.role}-${index}`}
                 style={{
                   ...styles.message,
                   ...(message.role === "user" ? styles.userMessage : styles.assistantMessage),
+                  textAlign,
+                  alignSelf: message.role === "user" ? (isArabic ? "flex-start" : "flex-end") : (isArabic ? "flex-end" : "flex-start"),
                 }}
               >
                 {message.content}
               </div>
             ))}
             {isThinking && (
-              <div style={{ ...styles.message, ...styles.assistantMessage }}>
+              <div style={{ ...styles.message, ...styles.assistantMessage, textAlign, alignSelf: isArabic ? "flex-end" : "flex-start" }}>
                 {translateText("Thinking across your result...", language)}
               </div>
             )}
@@ -136,17 +145,14 @@ export default function ResultsChatAssistant({ result, scanResult, healthData, t
               onChange={(event) => setInput(event.target.value)}
               placeholder={translateText("Ask a follow-up...", language)}
               rows={2}
-              style={styles.input}
+              style={{ ...styles.input, direction: textDirection, textAlign }}
             />
             <button type="submit" style={styles.sendButton} disabled={!input.trim() || isThinking}>
               {translateText("Send", language)}
             </button>
           </form>
 
-          <p style={styles.disclaimer}>{translateText("Guidance only. For urgent symptoms, call 999 or go to A&E.", language)}</p>
-          {language !== "en" && (
-            <p style={styles.disclaimer}>{translateText("This is not a medical diagnosis.", language)}</p>
-          )}
+          <p style={{ ...styles.disclaimer, textAlign }}>{translateText("Guidance only. For urgent symptoms, call 999 or go to A&E.", language)}</p>
         </section>
       )}
 
@@ -183,6 +189,7 @@ const styles = {
     boxShadow: "0 24px 70px rgba(15, 23, 42, 0.38), inset 0 1px 0 rgba(255,255,255,0.12)",
     backdropFilter: "blur(18px)",
     pointerEvents: "auto" as const,
+    fontFamily: "'Noto Sans', 'Noto Sans Arabic', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
   },
   panelGlow: {
     position: "absolute" as const,

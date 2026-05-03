@@ -10,7 +10,7 @@ import { findNhsReferencesForText } from "./riskEngine";
 import type { FaceScanResult } from "../components/FaceScan";
 import type { ConnectedHealthData } from "../types/health";
 import type { AppLanguage } from "../types/language";
-import { localisedPromptSuffix, translateText } from "./translation";
+import { localisedPromptSuffix, selectedLanguageName, translateText } from "./translation";
 import { KASHF_SYSTEM_PROMPT } from "./kashfPrompt.js";
 
 export interface TailoredInsight {
@@ -132,21 +132,6 @@ FACIAL WELLNESS SCAN
 - Visual concern level: ${input.scan?.visualConcernLevel || "not assessed"}
 - Observations: ${scanObservations}
 - Processing notes: ${scanInsights}
-`;
-}
-
-function safetyGuidelines(): string {
-  return `
-NHS-STYLE SAFETY RULES
-- Kashf is not a diagnostic tool and does not replace a GP, NHS 111, 999, A&E, urgent care, or a pharmacist.
-- Use UK wording: GP, NHS 111, 999, A&E, pharmacist, urgent care.
-- Use cautious language: "may", "could", "consider", "possible", "visible wellness signals".
-- Never diagnose, claim certainty, recommend medication, or give treatment instructions.
-- Facial scan data must only be described as visible wellness signals, never clinical proof.
-- Never say a facial scan is "healthy". If visual concern level is moderate or high, make the output more cautious and suggest sharing changes with a GP/NHS 111 alongside symptoms.
-- If red flags are present, advise calling 999 or going to A&E.
-- If symptoms are severe, sudden, worsening, or the user is worried, advise seeking medical advice.
-- Always include the idea that this is not a medical diagnosis.
 `;
 }
 
@@ -272,9 +257,7 @@ function mapGroqReportToTailoredInsight(report: GroqKashfReport, input: Reasonin
     clinicalNarrative: report.tailoredPerspective || report.riskReason || fallback.clinicalNarrative,
     dynamicGPQuestions: report.questionsForGP?.length ? report.questionsForGP : fallback.dynamicGPQuestions,
     systemCorrelations: report.systemCorrelations?.length ? report.systemCorrelations : fallback.systemCorrelations,
-    personalizedAdvice: report.safetyNetting
-      ? `${report.recommendedActionText || fallback.nextStep} ${report.safetyNetting}`
-      : report.recommendedActionText || fallback.personalizedAdvice,
+    personalizedAdvice: report.recommendedActionText || fallback.personalizedAdvice,
     nhsSelfCareRecommendations: report.nhsSelfCareGuidance?.length
       ? report.nhsSelfCareGuidance
       : fallback.nhsSelfCareRecommendations,
@@ -323,39 +306,71 @@ export async function generateChatAssistantReply(
   if (!hasGroqKey) {
     return translateText(generateChatFallback(input, latestUserMessage, tailoredInsight), language);
   }
+  const selectedLanguage = selectedLanguageName(language);
+  const chatTailoredInsight = tailoredInsight
+    ? { ...tailoredInsight, personalizedAdvice: tailoredInsight.nextStep }
+    : null;
+  const kashfReport = {
+    riskLevel: input.analysis.riskLevel,
+    riskLabel: input.analysis.riskLabel,
+    riskReason: input.analysis.riskSummary,
+    symptoms: input.analysis.selectedSymptomLabels,
+    severity: input.analysis.severity,
+    duration: input.analysis.duration,
+    nhsReferences: input.analysis.nhsReferences,
+    nhsSelfCare: input.analysis.nhsSelfCare,
+    facialScan: input.scan ? {
+      scanQuality: input.scan.scanQuality,
+      visualConcernLevel: input.scan.visualConcernLevel,
+      observations: input.scan.observations,
+    } : null,
+    healthData: input.healthData,
+    tailoredInsight: chatTailoredInsight,
+  };
 
   const conversation = messages
     .slice(-8)
     .map((message) => `${message.role === "user" ? "User" : "Kashf"}: ${message.content}`)
     .join("\n");
 
-  const prompt = `
-You are the Kashf results-page assistant. Answer the user's follow-up using only the supplied assessment context.
-Keep the answer short, calm, patient-friendly, and NHS-style.
-${localisedPromptSuffix(language)}
+  const chatSystemPrompt = `
+You are Kashf Assistant, a friendly wellness guidance chatbot.
 
+IMPORTANT: You must respond ENTIRELY and ONLY in ${selectedLanguage}. Every word of your response must be in ${selectedLanguage}.
+Do not mix languages. Do not include any other language in your response.
+
+The user's assessment report:
+${JSON.stringify(kashfReport)}
+
+Rules:
+- Never diagnose
+- Use NHS UK terms translated into ${selectedLanguage}
+- Stay calm and supportive
+- If chest pain, breathing difficulty or stroke symptoms are mentioned, tell user to call 999 or go to A&E, translated into ${selectedLanguage}
+- Keep responses concise and clear
+- Do not append the safety netting disclaimer to message bubbles; the UI displays it separately
+${localisedPromptSuffix(language)}
+`;
+
+  const prompt = `
+Assessment context:
 ${describePatientContext(input)}
 
-TAILORED INSIGHT ALREADY SHOWN
-${tailoredInsight ? JSON.stringify(tailoredInsight) : "No tailored insight available yet."}
-
-CONVERSATION
+Conversation so far:
 ${conversation}
 
-${safetyGuidelines()}
-
-NHS SYMPTOMS A TO Z REFERENCES MATCHED TO THIS RESULT
+NHS symptom references:
 ${input.analysis.nhsReferences.map((reference) => `- ${reference.label}: ${reference.url}`).join("\n") || "- https://www.nhs.uk/symptoms/"}
 
-NHS SELF-CARE SOURCE CONTEXT
+NHS self-care source context:
 ${nhsSelfCareContext(input)}
 
-Return plain text only. Do not use markdown tables. If the user asks about a symptom that was not selected, answer cautiously, say it is outside the submitted assessment context, and point them to the nearest NHS Symptoms A to Z reference if one is available. Do not invent missing medical history.
+Return plain text only. Do not use markdown tables. Answer the latest user message using only the assessment context.
 `;
 
   try {
     return (await callGroq([
-      { role: "system", content: "You are Kashf, a UK NHS-style wellness triage explainer. You are not a doctor. Return plain text only for this chat reply." },
+      { role: "system", content: chatSystemPrompt },
       { role: "user", content: prompt },
     ], 700)).trim();
   } catch (error) {
@@ -414,7 +429,6 @@ function generateHeuristicFallbackSync(input: ReasoningInput): TailoredInsight {
     dynamicGPQuestions.push("Are the visible wellness changes I noticed worth mentioning alongside my symptoms?");
   }
 
-  const safetyNetting = "This is not a medical diagnosis. If symptoms are severe, sudden, worsening, or you are worried, seek medical advice. If you feel seriously unwell, call 999 or go to A&E.";
   const nextStep =
     risk === "urgent"
       ? "Call 999 or go to A&E now if symptoms are severe, sudden, or worsening."
@@ -438,7 +452,7 @@ function generateHeuristicFallbackSync(input: ReasoningInput): TailoredInsight {
     clinicalNarrative: `Your report of ${symptoms.join(", ") || "no selected symptoms"} suggests ${analysis.riskLabel.toLowerCase()} based on this check. Kashf has combined your symptom input with ${healthData ? "connected health signals" : "available health context"} and ${scan ? "visible facial wellness signals" : "any facial scan context"} as supporting information, not as a diagnosis.`,
     dynamicGPQuestions: Array.from(new Set(dynamicGPQuestions)),
     systemCorrelations: correlations,
-    personalizedAdvice: `${nextStep} ${safetyNetting}`,
+    personalizedAdvice: nextStep,
     nhsSelfCareRecommendations,
     nextStep,
     careImpact: {
@@ -463,7 +477,6 @@ function generateChatFallback(
   const question = latestUserMessage.toLowerCase();
   const symptoms = input.analysis.selectedSymptomLabels.join(", ") || "your reported symptoms";
   const nextStep = tailoredInsight?.nextStep || input.analysis.recommendation;
-  const safety = "This is not a medical diagnosis. If symptoms are severe, sudden, worsening, or you are worried, seek medical advice; call 999 or go to A&E if you feel seriously unwell.";
   const nhsMatches = findNhsReferencesForText(latestUserMessage);
   const activeReferences = nhsMatches.length > 0 ? nhsMatches : input.analysis.nhsReferences;
 
@@ -475,33 +488,33 @@ function generateChatFallback(
     const contextNote = nhsMatches.length > 0
       ? "I matched your question to the NHS Symptoms A to Z reference list."
       : "I matched your submitted symptoms to the NHS Symptoms A to Z reference list.";
-    return `${contextNote} Relevant NHS reference(s): ${referenceText}.${selfCare} Based on your submitted assessment, the next step is: ${nextStep} If this symptom is new, severe, sudden, worsening, or worrying, seek medical advice rather than relying on this check. ${safety}`;
+    return `${contextNote} Relevant NHS reference(s): ${referenceText}.${selfCare} Based on your submitted assessment, the next step is: ${nextStep}`;
   }
 
   if (question.includes("gp") || question.includes("doctor")) {
     const gpQuestions = tailoredInsight?.dynamicGPQuestions || input.analysis.gpQuestions;
-    return `For your GP, mention ${symptoms}, the duration (${input.analysis.duration || "not specified"}), severity (${input.analysis.severity}), and any connected health or facial wellness observations. Useful questions include: ${gpQuestions.slice(0, 3).join(" ")} ${safety}`;
+    return `For your GP, mention ${symptoms}, the duration (${input.analysis.duration || "not specified"}), severity (${input.analysis.severity}), and any connected health or facial wellness observations. Useful questions include: ${gpQuestions.slice(0, 3).join(" ")}`;
   }
 
   if (question.includes("face") || question.includes("scan")) {
     const observations = input.scan?.observations.map((observation) => observation.label).join(", ") || "no completed facial scan";
-    return `The facial scan is treated only as visible wellness context. It noted ${observations}, but this cannot diagnose a condition. The symptom input remains the main basis for the guidance. ${safety}`;
+    return `The facial scan is treated only as visible wellness context. It noted ${observations}, but this cannot diagnose a condition. The symptom input remains the main basis for the guidance.`;
   }
 
   if (question.includes("health") || question.includes("sleep") || question.includes("heart") || question.includes("recovery")) {
     const metrics = input.healthData?.metrics;
     if (!metrics) {
-      return `No connected health data was supplied for this result, so the guidance is based mainly on your symptom answers. ${safety}`;
+      return "No connected health data was supplied for this result, so the guidance is based mainly on your symptom answers.";
     }
-    return `Your connected health data adds context: heart rate ${metrics.heartRate}, sleep ${metrics.sleep}, recovery ${metrics.recovery}, HRV ${metrics.hrv}, and steps ${metrics.steps}. Share these with a GP or NHS 111 if you seek advice. ${safety}`;
+    return `Your connected health data adds context: heart rate ${metrics.heartRate}, sleep ${metrics.sleep}, recovery ${metrics.recovery}, HRV ${metrics.hrv}, and steps ${metrics.steps}. Share these with a GP or NHS 111 if you seek advice.`;
   }
 
   if (question.includes("next") || question.includes("what should")) {
     const selfCare = tailoredInsight?.nhsSelfCareRecommendations?.length
       ? ` NHS-based self-care guidance in your report includes: ${tailoredInsight.nhsSelfCareRecommendations.slice(0, 3).join(" ")}`
       : "";
-    return `The suggested next step is: ${nextStep} This is based on ${symptoms}, severity ${input.analysis.severity}, and duration ${input.analysis.duration || "not specified"}.${selfCare} ${safety}`;
+    return `The suggested next step is: ${nextStep} This is based on ${symptoms}, severity ${input.analysis.severity}, and duration ${input.analysis.duration || "not specified"}.${selfCare}`;
   }
 
-  return `Based on this result, Kashf is linking ${symptoms} with any connected health data and visible wellness scan context to suggest: ${nextStep} ${safety}`;
+  return `Based on this result, Kashf is linking ${symptoms} with any connected health data and visible wellness scan context to suggest: ${nextStep}`;
 }
