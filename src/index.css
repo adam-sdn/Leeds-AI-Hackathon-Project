@@ -88,3 +88,18 @@ body {
   --red: #D55E00 !important;  /* Red-Blind safe */
   --green: #009E73 !important; /* Green-Blind safe */
 }
+
+@layer utilities {
+  @keyframes shine {
+    0% {
+      background-position: 100%;
+    }
+    100% {
+      background-position: -100%;
+    }
+  }
+
+  .animate-shine {
+    animation: shine 5s linear infinite;
+  }
+}

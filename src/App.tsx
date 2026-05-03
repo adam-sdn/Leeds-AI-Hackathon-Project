@@ -9,6 +9,7 @@ import AccessibilityMenu from "./components/AccessibilityMenu";
 import HealthDataConnect from "./components/HealthDataConnect";
 import ResultsLoadingTerminal from "./components/ResultsLoadingTerminal";
 import LanguageRefreshOverlay from "./components/LanguageRefreshOverlay";
+import InteractiveHero from "./components/ui/hero-section-nexus";
 import type { FaceScanResult } from "./components/FaceScan";
 import type { ConnectedHealthData } from "./types/health";
 import { languageLabels } from "./types/language";
@@ -17,7 +18,7 @@ import { uiText } from "./utils/i18n";
 import "./App.css";
 
 type Severity = "mild" | "moderate" | "severe";
-type View = "health" | "form" | "scan";
+type View = "home" | "health" | "form" | "scan";
 
 interface AnalyzePayload {
   symptoms: string[];
@@ -27,12 +28,13 @@ interface AnalyzePayload {
 
 function App() {
   const [result, setResult] = useState<AnalysisResult | null>(null);
-  const [view, setView] = useState<View>("scan");
+  const [view, setView] = useState<View>("home");
   const [scanResult, setScanResult] = useState<FaceScanResult | null>(null);
   const [healthData, setHealthData] = useState<ConnectedHealthData | null>(null);
   const [language, setLanguage] = useState<AppLanguage>("en");
   const [isRefreshingLanguage, setIsRefreshingLanguage] = useState(false);
   const [isPreparingResults, setIsPreparingResults] = useState(false);
+  const [isStartingAnalysis, setIsStartingAnalysis] = useState(false);
 
   const [accSettings, setAccSettings] = useState({
     highContrast: false,
@@ -66,7 +68,18 @@ function App() {
   function handleReset() {
     setResult(null);
     setIsPreparingResults(false);
+    setIsStartingAnalysis(false);
     setView("scan");
+  }
+
+  function handleStartAnalysis() {
+    setResult(null);
+    setIsPreparingResults(false);
+    setIsStartingAnalysis(true);
+    window.setTimeout(() => {
+      setView("scan");
+      window.setTimeout(() => setIsStartingAnalysis(false), 450);
+    }, 850);
   }
 
   function handleLanguageChange(nextLanguage: AppLanguage) {
@@ -87,6 +100,7 @@ function App() {
       data-theme="dark"
       dir={language === "ar" ? "rtl" : "ltr"}
     >
+      {view !== "home" && (
       <header className="header">
         <div className="brand-header-group" onClick={handleReset}>
           <div className="brand-mark">K</div>
@@ -122,10 +136,21 @@ function App() {
           </button>
         </div>
       </header>
+      )}
 
-      <main className="app-main">
+      {isStartingAnalysis && (
+        <LanguageRefreshOverlay
+          language={language}
+          message="Preparing Face Scan Wellness Check"
+          label="Kashf.ai"
+        />
+      )}
+
+      <main className={view === "home" ? "app-main app-main--home" : "app-main"}>
         {isRefreshingLanguage && <LanguageRefreshOverlay language={language} />}
-        {isPreparingResults ? (
+        {view === "home" ? (
+          <InteractiveHero onStartAnalysis={handleStartAnalysis} />
+        ) : isPreparingResults ? (
           <ResultsLoadingTerminal />
         ) : view === "health" ? (
           <HealthDataConnect onComplete={handleHealthComplete} language={language} />
@@ -164,9 +189,11 @@ function App() {
         )}
       </main>
 
+      {view !== "home" && (
       <footer className="app-footer">
         <p>Kashf.ai - Not a medical service - For guidance only</p>
       </footer>
+      )}
     </div>
   );
 }
