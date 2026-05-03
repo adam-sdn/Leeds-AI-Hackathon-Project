@@ -161,9 +161,9 @@ export default function ResultsChatAssistant({ result, scanResult, healthData, t
 const styles = {
   shell: {
     position: "fixed" as const,
-    right: "24px",
-    bottom: "24px",
-    zIndex: 1200,
+    right: "28px",
+    bottom: "32px",
+    zIndex: 5000,
     display: "flex",
     flexDirection: "column" as const,
     alignItems: "flex-end",
@@ -172,8 +172,8 @@ const styles = {
   },
   panel: {
     position: "relative" as const,
-    width: "min(380px, calc(100vw - 32px))",
-    maxHeight: "min(680px, calc(100vh - 112px))",
+    width: "min(420px, calc(100vw - 32px))",
+    maxHeight: "min(720px, calc(100vh - 132px))",
     display: "flex",
     flexDirection: "column" as const,
     overflow: "hidden",

@@ -72,6 +72,14 @@ function App() {
     setView("scan");
   }
 
+  function handleReturnHome() {
+    setResult(null);
+    setIsPreparingResults(false);
+    setIsStartingAnalysis(false);
+    setView("home");
+    window.setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 0);
+  }
+
   function handleStartAnalysis() {
     setResult(null);
     setIsPreparingResults(false);
@@ -102,7 +110,7 @@ function App() {
     >
       {view !== "home" && (
       <header className="header">
-        <div className="brand-header-group" onClick={handleReset}>
+        <div className="brand-header-group" onClick={handleReturnHome}>
           <div className="brand-mark">K</div>
           <span className="brand-text">
             kashf<span className="brand-dot">.ai</span>

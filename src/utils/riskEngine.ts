@@ -25,8 +25,16 @@ export type AnalysisResult = {
     label: string;
     url: string;
   }>;
+  nhsSelfCare: NhsSelfCareAdvice[];
   duration: string;
   severity: Severity;
+};
+
+export type NhsSelfCareAdvice = {
+  label: string;
+  sourceUrl: string;
+  selfCare: string[];
+  seekHelp: string[];
 };
 
 export const nhsReferenceMap: Record<string, { label: string; url: string; keywords?: string[] }> = {
@@ -80,6 +88,97 @@ export const nhsReferenceMap: Record<string, { label: string; url: string; keywo
   anxiety: { label: "Anxiety, fear and panic", url: "https://www.nhs.uk/mental-health/feelings-symptoms-behaviours/feelings-and-symptoms/anxiety-fear-panic/" },
 };
 
+export const nhsSelfCareMap: Partial<Record<string, NhsSelfCareAdvice>> = {
+  sore_throat: {
+    label: "Sore throat",
+    sourceUrl: "https://www.nhs.uk/symptoms/sore-throat/",
+    selfCare: [
+      "Drink plenty of water and rest while symptoms settle.",
+      "Cool or soft foods, ice lollies, or hard sweets may soothe the throat; do not give small hard sweets to young children.",
+      "Adults can try gargling warm salty water, then spit it out.",
+      "Avoid smoking or smoky places.",
+    ],
+    seekHelp: [
+      "Get advice from NHS 111 or an urgent GP appointment if you are worried, have a very high temperature, feel shivery, have signs of dehydration, or have a weakened immune system.",
+      "Call 999 or go to A&E for difficulty breathing, being unable to swallow, drooling, stridor, or severe symptoms getting worse quickly.",
+    ],
+  },
+  headache: {
+    label: "Headaches",
+    sourceUrl: "https://www.nhs.uk/symptoms/headaches/",
+    selfCare: [
+      "Drink plenty of water and rest if you also have a cold or flu.",
+      "Try to relax, as stress can make headaches worse.",
+      "Avoid alcohol, skipping meals, oversleeping, and prolonged eye strain.",
+    ],
+    seekHelp: [
+      "See a GP if headaches keep coming back, painkillers do not help and it gets worse, or you have sickness with light or noise sensitivity.",
+      "Get urgent help for a severe headache with jaw pain when eating, blurred or double vision, sore scalp, numbness, or weakness.",
+    ],
+  },
+  back_pain: {
+    label: "Back pain",
+    sourceUrl: "https://www.nhs.uk/conditions/back-pain/",
+    selfCare: [
+      "Keep active and try to continue normal activities as much as you can.",
+      "Gentle stretches and avoiding long periods of bed rest may help recovery.",
+      "Speak to a pharmacist about pain relief options that are safe for you.",
+    ],
+    seekHelp: [
+      "Get medical advice if pain does not improve after a few weeks, is severe, or stops you doing day-to-day activities.",
+      "Seek urgent help if back pain follows major trauma or comes with weakness, numbness, bladder or bowel changes, or feeling very unwell.",
+    ],
+  },
+  palpitations: {
+    label: "Heart palpitations",
+    sourceUrl: "https://www.nhs.uk/symptoms/heart-palpitations/",
+    selfCare: [
+      "Avoid common triggers such as stress, smoking, caffeine, and alcohol where relevant.",
+      "Note when palpitations happen, how long they last, and any medicines or stimulants taken beforehand.",
+    ],
+    seekHelp: [
+      "See a GP if palpitations keep coming back, happen more often, last longer than a few minutes, or you have a heart condition or family history.",
+      "Call 999 or go to A&E if palpitations do not go away or occur with chest pain, shortness of breath, feeling faint, or fainting.",
+    ],
+  },
+  heart_racing: {
+    label: "Heart palpitations",
+    sourceUrl: "https://www.nhs.uk/symptoms/heart-palpitations/",
+    selfCare: [
+      "Avoid common triggers such as stress, smoking, caffeine, and alcohol where relevant.",
+      "Note when the racing heartbeat happens, how long it lasts, and whether it occurs with chest pain, breathlessness, or faintness.",
+    ],
+    seekHelp: [
+      "See a GP if it keeps coming back, happens more often, lasts longer than a few minutes, or you have a heart condition or family history.",
+      "Call 999 or go to A&E if it does not go away or occurs with chest pain, shortness of breath, feeling faint, or fainting.",
+    ],
+  },
+  fatigue: {
+    label: "Tiredness and fatigue",
+    sourceUrl: "https://www.nhs.uk/symptoms/tiredness-and-fatigue/",
+    selfCare: [
+      "Prioritise regular sleep, hydration, gentle movement, and balanced meals where possible.",
+      "Track tiredness alongside stress, sleep, new medicines, and other symptoms to share if you seek care.",
+    ],
+    seekHelp: [
+      "Contact a GP if tiredness is persistent, unexplained, worsening, or affecting day-to-day life.",
+      "Seek urgent help if fatigue occurs with severe symptoms such as chest pain, severe breathlessness, confusion, or fainting.",
+    ],
+  },
+  fever: {
+    label: "High temperature in adults",
+    sourceUrl: "https://www.nhs.uk/symptoms/fever-in-adults/",
+    selfCare: [
+      "Rest and drink plenty of fluids.",
+      "Stay at home and avoid contact with others if you have a high temperature or do not feel well enough for normal activities.",
+    ],
+    seekHelp: [
+      "Get medical advice if symptoms are severe, worsening, or you are worried.",
+      "Seek urgent help for signs of serious illness such as confusion, severe breathlessness, chest pain, or a rash that does not fade under pressure.",
+    ],
+  },
+};
+
 export function findNhsReferencesForText(text: string) {
   const normalised = text.toLowerCase();
   const matches = Object.values(nhsReferenceMap).filter((reference) => {
@@ -100,6 +199,14 @@ function getNhsReferences(selected: typeof symptoms) {
     label: symptom.label,
     url: "https://www.nhs.uk/symptoms/",
   }));
+}
+
+function getNhsSelfCare(selected: typeof symptoms): NhsSelfCareAdvice[] {
+  const byValue = selected
+    .map((symptom) => nhsSelfCareMap[symptom.value])
+    .filter((advice): advice is NhsSelfCareAdvice => Boolean(advice));
+
+  return Array.from(new Map(byValue.map((item) => [item.sourceUrl, item])).values()).slice(0, 4);
 }
 
 export function analyzeSymptoms(input: AnalysisInput): AnalysisResult {
@@ -143,6 +250,7 @@ export function analyzeSymptoms(input: AnalysisInput): AnalysisResult {
 
   const selectedCategories = Array.from(new Set(selected.map(s => s.category)));
   const nhsReferences = getNhsReferences(selected);
+  const nhsSelfCare = getNhsSelfCare(selected);
 
   const why = [
     selected.length > 0
@@ -178,6 +286,7 @@ export function analyzeSymptoms(input: AnalysisInput): AnalysisResult {
     selectedSymptomLabels: selected.map((s) => s.label),
     selectedCategories,
     nhsReferences,
+    nhsSelfCare,
     duration: input.duration,
     severity: input.severity,
   };

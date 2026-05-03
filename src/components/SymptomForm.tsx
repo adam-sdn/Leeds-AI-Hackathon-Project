@@ -156,8 +156,10 @@ export function SymptomForm({ onAnalyze, language }: SymptomFormProps) {
             />
           </div>
 
-          <button type="submit" className="analyze-btn" disabled={selectedSymptoms.length === 0}>
-            {uiText(language, "analyzeSymptoms")} →
+          <button type="submit" className="analyze-btn kashf-blue-button" disabled={selectedSymptoms.length === 0}>
+            <span className="kashf-blue-button__transition" />
+            <span className="kashf-blue-button__gradient" />
+            <span className="kashf-blue-button__label">{uiText(language, "analyzeSymptoms")} →</span>
           </button>
         </div>
       )}

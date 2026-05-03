@@ -81,6 +81,11 @@ export default function ResultsDashboard({ result, scanResult, healthData, langu
   const impactData = getImpactData(result.riskLevel);
   const [tailoredInsight, setTailoredInsight] = useState<TailoredInsight | null>(null);
   const [isLoadingAI, setIsLoadingAI] = useState(true);
+  const nhsSelfCareRecommendations =
+    tailoredInsight?.nhsSelfCareRecommendations?.length
+      ? tailoredInsight.nhsSelfCareRecommendations
+      : result.nhsSelfCare.flatMap((advice) => advice.selfCare.slice(0, 2)).slice(0, 5);
+  const generatedImpact = tailoredInsight?.careImpact?.impact || impactData.impact;
   const cleanScanInsights = (scanResult?.insights || []).filter((insight) =>
     !/fallback|error|api key|failed/i.test(insight)
   );
@@ -226,6 +231,47 @@ export default function ResultsDashboard({ result, scanResult, healthData, langu
     y += 8;
     addTranslationBlock("Translated next step", [result.recommendation]);
 
+    if (result.nhsReferences.length > 0) {
+      ensureSpace(24);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(15);
+      doc.setTextColor(15, 23, 42);
+      doc.text("NHS Symptom References", margin, y);
+      y += 8;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      result.nhsReferences.forEach((reference) => {
+        addBullet(`${reference.label}: ${reference.url}`);
+        y += 2;
+      });
+      y += 6;
+    }
+
+    if (nhsSelfCareRecommendations.length > 0) {
+      ensureSpace(28);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(15);
+      doc.setTextColor(15, 23, 42);
+      doc.text("NHS-Based Self-Care Guidance", margin, y);
+      y += 8;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      addWrappedText("Generated from the NHS guidance matched to the selected symptoms. This is guidance only, not a diagnosis.", margin, contentWidth, 5);
+      y += 3;
+      nhsSelfCareRecommendations.forEach((item) => {
+        addBullet(item);
+        y += 2;
+      });
+      if (result.nhsSelfCare.length > 0) {
+        y += 2;
+        result.nhsSelfCare.forEach((advice) => {
+          addBullet(`Source: ${advice.label} - ${advice.sourceUrl}`);
+          y += 2;
+        });
+      }
+      y += 6;
+    }
+
     ensureSpace(30);
     doc.setFont("helvetica", "bold");
     doc.setFontSize(15);
@@ -238,25 +284,25 @@ export default function ResultsDashboard({ result, scanResult, healthData, langu
     doc.text("If you act now:", margin, y);
     y += 6;
     doc.setFont("helvetica", "normal");
-    impactData.actNow.forEach(item => { addBullet(item); y += 2; });
+    (tailoredInsight?.careImpact.actNow || impactData.actNow).forEach(item => { addBullet(item); y += 2; });
     
     y += 2;
     doc.setFont("helvetica", "bold");
     doc.text("If delayed:", margin, y);
     y += 6;
     doc.setFont("helvetica", "normal");
-    impactData.delayed.forEach(item => { addBullet(item); y += 2; });
+    (tailoredInsight?.careImpact.delayed || impactData.delayed).forEach(item => { addBullet(item); y += 2; });
 
     y += 2;
     doc.setFont("helvetica", "bold");
     doc.text("Estimated impact:", margin, y);
     y += 6;
     doc.setFont("helvetica", "normal");
-    addBullet(`Time disruption: ${impactData.impact.time}`);
+    addBullet(`Time disruption: ${generatedImpact.time}`);
     y += 2;
-    addBullet(`Care complexity: ${impactData.impact.complexity}`);
+    addBullet(`Care complexity: ${generatedImpact.complexity}`);
     y += 2;
-    addBullet(`Escalation risk: ${impactData.impact.escalation}`);
+    addBullet(`Escalation risk: ${generatedImpact.escalation}`);
     y += 8;
 
     if (result.biggerPicture && result.biggerPicture.length > 0) {
@@ -569,6 +615,35 @@ export default function ResultsDashboard({ result, scanResult, healthData, langu
         </div>
       )}
 
+      {nhsSelfCareRecommendations.length > 0 && (
+        <div style={{ ...styles.card, borderLeft: '4px solid #38BDF8' }}>
+          <h3 style={styles.cardTitle}>NHS-Based Self-Care Guidance</h3>
+          <p style={{ fontSize: '13px', color: 'var(--muted)', margin: '10px 0 16px', lineHeight: 1.55 }}>
+            Kashf generated these recommendations from the NHS pages matched to your selected symptoms. This is guidance only, not a diagnosis.
+          </p>
+          <ul style={styles.list}>
+            {nhsSelfCareRecommendations.map((item, index) => (
+              <li key={index} style={styles.listItem}>{tx(item)}</li>
+            ))}
+          </ul>
+          {result.nhsSelfCare.length > 0 && (
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginTop: '16px' }}>
+              {result.nhsSelfCare.map((advice) => (
+                <a
+                  key={advice.sourceUrl}
+                  href={advice.sourceUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="nhs-reference-pill"
+                >
+                  NHS: {advice.label}
+                </a>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* 3. Care Impact Dashboard */}
       <div style={styles.card}>
         <h3 style={styles.cardTitle}>{uiText(language, "careImpact")}</h3>
@@ -598,9 +673,9 @@ export default function ResultsDashboard({ result, scanResult, healthData, langu
         <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid var(--border)' }}>
           <h4 style={{ margin: '0 0 12px 0', fontSize: '14px', color: 'var(--text)' }}>Estimated impact levels</h4>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
-            <ImpactMetric icon="clock" label="Time" value={impactData.impact.time} />
-            <ImpactMetric icon="pulse" label="Care" value={impactData.impact.complexity} />
-            <ImpactMetric icon="alert" label="Risk" value={impactData.impact.escalation} />
+            <ImpactMetric icon="clock" label="Time" value={generatedImpact.time} />
+            <ImpactMetric icon="pulse" label="Care" value={generatedImpact.complexity} />
+            <ImpactMetric icon="alert" label="Risk" value={generatedImpact.escalation} />
           </div>
         </div>
       </div>
@@ -687,18 +762,32 @@ export default function ResultsDashboard({ result, scanResult, healthData, langu
       </div>
 
       {/* 10. Actions */}
-      <div style={{ display: 'flex', gap: '12px', flexDirection: 'column' }}>
+      <div className="report-actions">
         <div style={styles.actionGroup}>
-          <button style={styles.secondaryButton} onClick={() => downloadPDF(false)}>{uiText(language, "downloadEnglish")} ↓</button>
+          <button className="kashf-blue-button kashf-blue-button--secondary" onClick={() => downloadPDF(false)}>
+            <span className="kashf-blue-button__transition" />
+            <span className="kashf-blue-button__gradient" />
+            <span className="kashf-blue-button__label">{uiText(language, "downloadEnglish")} ↓</span>
+          </button>
           {language !== "en" && (
-            <button style={styles.secondaryButton} onClick={() => downloadPDF(true)}>
-              {uiText(language, "downloadTranslated")} ↓
+            <button className="kashf-blue-button kashf-blue-button--secondary" onClick={() => downloadPDF(true)}>
+              <span className="kashf-blue-button__transition" />
+              <span className="kashf-blue-button__gradient" />
+              <span className="kashf-blue-button__label">{uiText(language, "downloadTranslated")} ↓</span>
             </button>
           )}
-          <button style={styles.button} onClick={onStartAgain}>{uiText(language, "startAnother")}</button>
+          <button className="kashf-blue-button" onClick={onStartAgain}>
+            <span className="kashf-blue-button__transition" />
+            <span className="kashf-blue-button__gradient" />
+            <span className="kashf-blue-button__label">{uiText(language, "startAnother")}</span>
+          </button>
         </div>
         {onRescanFace && (
-          <button style={styles.rescanButton} onClick={onRescanFace}>{uiText(language, "rescanFace")}</button>
+          <button className="kashf-blue-button kashf-blue-button--secondary" onClick={onRescanFace}>
+            <span className="kashf-blue-button__transition" />
+            <span className="kashf-blue-button__gradient" />
+            <span className="kashf-blue-button__label">{uiText(language, "rescanFace")}</span>
+          </button>
         )}
       </div>
       <ResultsChatAssistant

@@ -18,10 +18,16 @@ export interface TailoredInsight {
   dynamicGPQuestions: string[];
   systemCorrelations: string[];
   personalizedAdvice: string;
+  nhsSelfCareRecommendations: string[];
   nextStep: string;
   careImpact: {
     actNow: string[];
     delayed: string[];
+    impact: {
+      time: string;
+      complexity: string;
+      escalation: string;
+    };
   };
   whySuggested: string[];
   biggerPicture: string[];
@@ -96,6 +102,21 @@ NHS-STYLE SAFETY RULES
 `;
 }
 
+function nhsSelfCareContext(input: ReasoningInput): string {
+  if (!input.analysis.nhsSelfCare.length) {
+    return "No specific NHS self-care snippets are available for the selected symptoms. Use only the matched NHS reference URLs and general safety-netting.";
+  }
+
+  return input.analysis.nhsSelfCare.map((advice) => `
+${advice.label}
+Source: ${advice.sourceUrl}
+NHS self-care points:
+${advice.selfCare.map((item) => `- ${item}`).join("\n")}
+NHS seek-help points:
+${advice.seekHelp.map((item) => `- ${item}`).join("\n")}
+`).join("\n");
+}
+
 export async function generateTailoredInsight(input: ReasoningInput): Promise<TailoredInsight> {
   if (!genAI) {
     console.warn("[AI Reasoning Engine] No Gemini API key found. Using heuristic fallback.");
@@ -109,16 +130,26 @@ Synthesize all supplied patient context into a tailored, cautious health insight
 
 ${describePatientContext(input)}
 
+NHS SELF-CARE SOURCE CONTEXT
+Use these NHS-derived points for self-care recommendations. Do not invent treatment advice outside this context.
+${nhsSelfCareContext(input)}
+
 OUTPUT FORMAT (JSON):
 {
   "clinicalNarrative": "A 2-3 sentence patient-friendly summary connecting symptoms, health metrics, and facial wellness signals without diagnosing.",
   "dynamicGPQuestions": ["3-5 specific questions for the user to ask their GP"],
   "systemCorrelations": ["3 specific links found between symptom input, connected health data, and facial wellness data"],
   "personalizedAdvice": "1-2 sentences of safety-first guidance using NHS-style wording.",
+  "nhsSelfCareRecommendations": ["3-5 recommendations derived only from the NHS SELF-CARE SOURCE CONTEXT, with cautious wording and no medication dosing"],
   "nextStep": "A concise recommended action.",
   "careImpact": {
-    "actNow": ["2 benefits of acting immediately"],
-    "delayed": ["2 risks or consequences of delaying care"]
+    "actNow": ["2 benefits of acting immediately, based on symptoms, face scan context and health data"],
+    "delayed": ["2 risks or consequences of delaying care, based on symptoms, face scan context and health data"],
+    "impact": {
+      "time": "Low, moderate, high, or a short patient-friendly estimate",
+      "complexity": "Low, moderate, or high",
+      "escalation": "Low, moderate, or high"
+    }
   },
   "whySuggested": ["2-3 bullet points explaining why this care level was chosen"],
   "biggerPicture": ["2 points about the broader health impact of these symptoms"]
@@ -179,6 +210,9 @@ ${safetyGuidelines()}
 
 NHS SYMPTOMS A TO Z REFERENCES MATCHED TO THIS RESULT
 ${input.analysis.nhsReferences.map((reference) => `- ${reference.label}: ${reference.url}`).join("\n") || "- https://www.nhs.uk/symptoms/"}
+
+NHS SELF-CARE SOURCE CONTEXT
+${nhsSelfCareContext(input)}
 
 Return plain text only. Do not use markdown tables. If the user asks about a symptom that was not selected, answer cautiously, say it is outside the submitted assessment context, and point them to the nearest NHS Symptoms A to Z reference if one is available. Do not invent missing medical history.
 `;
@@ -245,13 +279,26 @@ async function generateHeuristicFallback(input: ReasoningInput): Promise<Tailore
       ? "Call 999 or go to A&E now if symptoms are severe, sudden, or worsening."
       : risk === "moderate"
         ? "Consider contacting your GP or NHS 111, especially if symptoms continue or worsen."
-        : "Monitor your symptoms and consider a pharmacist, GP, or NHS 111 if you are unsure or symptoms change.";
+      : "Monitor your symptoms and consider a pharmacist, GP, or NHS 111 if you are unsure or symptoms change.";
+  const nhsSelfCareRecommendations = analysis.nhsSelfCare.length
+    ? analysis.nhsSelfCare.flatMap((advice) => advice.selfCare.slice(0, 2)).slice(0, 5)
+    : [
+        "Use the matched NHS reference links for symptom-specific self-care advice.",
+        "If symptoms are severe, sudden, worsening, or worrying, seek medical advice rather than relying on this check.",
+      ];
+  const hasScanConcern = scan?.visualConcernLevel && scan.visualConcernLevel !== "low";
+  const impact = {
+    time: risk === "urgent" ? "High" : risk === "moderate" ? "1-2 days" : "Minimal",
+    complexity: risk === "urgent" || hasScanConcern ? "High" : risk === "moderate" ? "Moderate" : "Low",
+    escalation: risk === "urgent" || hasScanConcern ? "High" : risk === "moderate" ? "Moderate" : "Low",
+  };
 
   return {
     clinicalNarrative: `Your report of ${symptoms.join(", ") || "no selected symptoms"} suggests ${analysis.riskLabel.toLowerCase()} based on this check. Kashf has combined your symptom input with ${healthData ? "connected health signals" : "available health context"} and ${scan ? "visible facial wellness signals" : "any facial scan context"} as supporting information, not as a diagnosis.`,
     dynamicGPQuestions: Array.from(new Set(dynamicGPQuestions)),
     systemCorrelations: correlations,
     personalizedAdvice: `${nextStep} ${safetyNetting}`,
+    nhsSelfCareRecommendations,
     nextStep,
     careImpact: {
       actNow: risk === "urgent"
@@ -259,7 +306,8 @@ async function generateHeuristicFallback(input: ReasoningInput): Promise<Tailore
         : ["You may get reassurance sooner.", "A GP, pharmacist, or NHS 111 can help decide whether monitoring is enough."],
       delayed: risk === "urgent"
         ? ["Potentially serious symptoms could worsen.", "Care may become more complex if urgent signs are ignored."]
-        : ["Symptoms may persist or become harder to interpret.", "You may miss the chance to share a clear symptom history early."]
+        : ["Symptoms may persist or become harder to interpret.", "You may miss the chance to share a clear symptom history early."],
+      impact,
     },
     whySuggested: analysis.why,
     biggerPicture: analysis.biggerPicture
@@ -280,10 +328,13 @@ function generateChatFallback(
 
   if (activeReferences.length > 0 && (question.includes("symptom") || question.includes("nhs") || nhsMatches.length > 0 || question.includes("why") || question.includes("what is"))) {
     const referenceText = activeReferences.map((reference) => `${reference.label}: ${reference.url}`).join("; ");
+    const selfCare = tailoredInsight?.nhsSelfCareRecommendations?.length
+      ? ` NHS-based self-care points shown in your report include: ${tailoredInsight.nhsSelfCareRecommendations.slice(0, 3).join(" ")}`
+      : "";
     const contextNote = nhsMatches.length > 0
       ? "I matched your question to the NHS Symptoms A to Z reference list."
       : "I matched your submitted symptoms to the NHS Symptoms A to Z reference list.";
-    return `${contextNote} Relevant NHS reference(s): ${referenceText}. Based on your submitted assessment, the next step is: ${nextStep} If this symptom is new, severe, sudden, worsening, or worrying, seek medical advice rather than relying on this check. ${safety}`;
+    return `${contextNote} Relevant NHS reference(s): ${referenceText}.${selfCare} Based on your submitted assessment, the next step is: ${nextStep} If this symptom is new, severe, sudden, worsening, or worrying, seek medical advice rather than relying on this check. ${safety}`;
   }
 
   if (question.includes("gp") || question.includes("doctor")) {
@@ -305,7 +356,10 @@ function generateChatFallback(
   }
 
   if (question.includes("next") || question.includes("what should")) {
-    return `The suggested next step is: ${nextStep} This is based on ${symptoms}, severity ${input.analysis.severity}, and duration ${input.analysis.duration || "not specified"}. ${safety}`;
+    const selfCare = tailoredInsight?.nhsSelfCareRecommendations?.length
+      ? ` NHS-based self-care guidance in your report includes: ${tailoredInsight.nhsSelfCareRecommendations.slice(0, 3).join(" ")}`
+      : "";
+    return `The suggested next step is: ${nextStep} This is based on ${symptoms}, severity ${input.analysis.severity}, and duration ${input.analysis.duration || "not specified"}.${selfCare} ${safety}`;
   }
 
   return `Based on this result, Kashf is linking ${symptoms} with any connected health data and visible wellness scan context to suggest: ${nextStep} ${safety}`;

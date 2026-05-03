@@ -138,20 +138,20 @@
 .symptom-form {
   display: flex;
   flex-direction: column;
-  gap: 28px;
+  gap: 34px;
   width: 100%;
-  max-width: 680px;
+  max-width: 760px;
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: 16px;
-  padding: 36px 40px;
+  padding: 44px 48px;
   box-shadow: var(--shadow);
 }
 
 .form-section {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 18px;
 }
 
 .form-label {
@@ -287,6 +287,9 @@
 
 .animate-fade-delayed {
   animation: fadeIn 0.5s ease-out 0.2s both;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
 }
 
 @keyframes fadeIn {
@@ -422,7 +425,8 @@
 
 /* ─── Analyze Button ────────────────────────────────────────────── */
 .analyze-btn {
-  padding: 14px 28px;
+  margin-top: 26px;
+  padding: 15px 32px;
   border-radius: 10px;
   border: none;
   background: var(--blue);
@@ -671,8 +675,12 @@
   flex-direction: column;
   align-items: center;
   width: 100%;
-  max-width: 800px;
+  max-width: 860px;
   margin: 0 auto;
+}
+
+.form-view {
+  width: min(860px, 100%);
 }
 
 .btn-secondary {
@@ -788,10 +796,6 @@
   .health-connect-view > div,
   .selection-summary,
   .concern-card,
-  .symptom-chip,
-  .severity-btn,
-  .duration-input,
-  .btn-secondary,
   .results-loading,
   .terminal-window,
   .red-flag-card,
@@ -811,10 +815,6 @@
   .health-connect-view > div,
   .selection-summary,
   .concern-card,
-  .symptom-chip,
-  .severity-btn,
-  .duration-input,
-  .btn-secondary,
   .results-loading,
   .terminal-window,
   .red-flag-card,
@@ -863,6 +863,7 @@
 
 .results-container {
   width: 100%;
+  padding-bottom: 140px;
 }
 
 .results-container :is(h1, h2, h3, h4, p, li, span, div):not(.launcherMark) {
@@ -1849,7 +1850,7 @@ button:hover:not(:disabled),
   height: 0;
   transform: translate(-50%, -50%);
   border-radius: 9999px;
-  background-color: rgba(16, 185, 129, 0.6);
+  background-color: rgba(37, 99, 235, 0.7);
   transition-timing-function: cubic-bezier(0, 0, 0.2, 1);
   transition-duration: 500ms;
 }
@@ -1860,12 +1861,98 @@ button:hover:not(:disabled),
 }
 
 .uiverse-button:hover {
-  border-color: rgba(167, 243, 208, 0.5);
-  box-shadow: 0 24px 60px rgba(16, 185, 129, 0.24), inset 0 1px 0 rgba(255,255,255,0.18);
+  border-color: rgba(147, 197, 253, 0.58);
+  box-shadow: 0 24px 60px rgba(37, 99, 235, 0.28), inset 0 1px 0 rgba(255,255,255,0.18);
 }
 
 .uiverse-button:active {
   transform: scale(0.97);
+}
+
+.kashf-blue-button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 52px;
+  min-width: 220px;
+  padding: 0.95em 2.2em;
+  overflow: hidden;
+  border: 1px solid rgba(147, 197, 253, 0.38);
+  border-radius: 0.6em;
+  background: #1f2937;
+  color: white;
+  cursor: pointer;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 800;
+  box-shadow: 0 18px 44px rgba(37, 99, 235, 0.22), inset 0 1px 0 rgba(255,255,255,0.13);
+  transition: transform 0.18s ease, border-color 0.28s ease, box-shadow 0.28s ease, opacity 0.28s ease;
+}
+
+.kashf-blue-button--secondary {
+  min-width: 260px;
+  background: rgba(3, 17, 42, 0.62);
+}
+
+.kashf-blue-button__gradient {
+  position: absolute;
+  inset: 0;
+  border-radius: 0.6em;
+  margin-top: -0.25em;
+  background-image: linear-gradient(rgba(0, 0, 0, 0), rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.3));
+}
+
+.kashf-blue-button__label {
+  position: relative;
+  top: -1px;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.kashf-blue-button__transition {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0;
+  height: 0;
+  transform: translate(-50%, -50%);
+  border-radius: 9999px;
+  background-color: rgba(37, 99, 235, 0.72);
+  transition-timing-function: cubic-bezier(0, 0, 0.2, 1);
+  transition-duration: 500ms;
+}
+
+.kashf-blue-button:hover:not(:disabled) .kashf-blue-button__transition {
+  width: 14em;
+  height: 14em;
+}
+
+.kashf-blue-button:hover:not(:disabled) {
+  transform: translateY(-2px) scale(1.015);
+  border-color: rgba(147, 197, 253, 0.68);
+  box-shadow: 0 24px 60px rgba(37, 99, 235, 0.32), inset 0 1px 0 rgba(255,255,255,0.18);
+}
+
+.kashf-blue-button:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.kashf-blue-button:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+
+.report-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  padding: 18px 0 110px;
 }
 
 .kashf-hero__ghost {
