@@ -17,20 +17,19 @@ type Props = {
   language: AppLanguage;
 };
 
-const quickPrompts = [
-  "What should I do next?",
-  "What should I tell my GP?",
-  "How does my health data affect this?",
-];
-
 export default function ResultsChatAssistant({ result, scanResult, healthData, tailoredInsight, language }: Props) {
+  const quickPrompts = [
+    translateText("What should I do next?", language),
+    translateText("What should I tell my GP?", language),
+    translateText("How does my health data affect this?", language),
+  ];
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState("");
   const [isThinking, setIsThinking] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>(() => [
     {
       role: "assistant",
-      content: "I can help explain this result using your symptoms, connected health data, and facial wellness scan context. I cannot diagnose, but I can help you prepare next steps.",
+      content: translateText("I can help explain this result using your symptoms, connected health data, and facial wellness scan context. I cannot diagnose, but I can help you prepare next steps.", language),
     },
   ]);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -63,7 +62,7 @@ export default function ResultsChatAssistant({ result, scanResult, healthData, t
         ...nextMessages,
         {
           role: "assistant",
-          content: "I could not generate a tailored reply just now. The key safety point still stands: this is not a medical diagnosis, and if symptoms are severe, sudden, worsening, or worrying, seek medical advice.",
+          content: translateText("I could not generate a tailored reply just now. The key safety point still stands: this is not a medical diagnosis, and if symptoms are severe, sudden, worsening, or worrying, seek medical advice.", language),
         },
       ]);
     } finally {
@@ -84,7 +83,7 @@ export default function ResultsChatAssistant({ result, scanResult, healthData, t
           <header style={styles.header}>
             <div>
               <p style={styles.kicker}>Kashf assistant</p>
-              <h3 style={styles.title}>Ask about your result</h3>
+              <h3 style={styles.title}>{translateText("Ask about your result", language)}</h3>
               <p style={styles.languageHint}>Replying in {languageLabels[language]} or matching your message.</p>
             </div>
             <button type="button" onClick={() => setIsOpen(false)} style={styles.closeButton} aria-label="Close assistant">
@@ -93,9 +92,9 @@ export default function ResultsChatAssistant({ result, scanResult, healthData, t
           </header>
 
           <div style={styles.contextRow}>
-            <span style={styles.contextPill}>{result.riskLabel}</span>
-            <span style={styles.contextPill}>{healthData?.metrics ? "Health data linked" : "No health data"}</span>
-            <span style={styles.contextPill}>{scanResult ? "Face scan linked" : "No face scan"}</span>
+            <span style={styles.contextPill}>{translateText(result.riskLabel, language)}</span>
+            <span style={styles.contextPill}>{translateText(healthData?.metrics ? "Health data linked" : "No health data", language)}</span>
+            <span style={styles.contextPill}>{translateText(scanResult ? "Face scan linked" : "No face scan", language)}</span>
           </div>
 
           <div ref={scrollRef} style={styles.messages}>
@@ -112,7 +111,7 @@ export default function ResultsChatAssistant({ result, scanResult, healthData, t
             ))}
             {isThinking && (
               <div style={{ ...styles.message, ...styles.assistantMessage }}>
-                Thinking across your result...
+                {translateText("Thinking across your result...", language)}
               </div>
             )}
           </div>
@@ -135,16 +134,16 @@ export default function ResultsChatAssistant({ result, scanResult, healthData, t
             <textarea
               value={input}
               onChange={(event) => setInput(event.target.value)}
-              placeholder="Ask a follow-up..."
+              placeholder={translateText("Ask a follow-up...", language)}
               rows={2}
               style={styles.input}
             />
             <button type="submit" style={styles.sendButton} disabled={!input.trim() || isThinking}>
-              Send
+              {translateText("Send", language)}
             </button>
           </form>
 
-          <p style={styles.disclaimer}>Guidance only. For urgent symptoms, call 999 or go to A&E.</p>
+          <p style={styles.disclaimer}>{translateText("Guidance only. For urgent symptoms, call 999 or go to A&E.", language)}</p>
           {language !== "en" && (
             <p style={styles.disclaimer}>{translateText("This is not a medical diagnosis.", language)}</p>
           )}
@@ -153,7 +152,7 @@ export default function ResultsChatAssistant({ result, scanResult, healthData, t
 
       <button type="button" style={styles.launcher} onClick={() => setIsOpen((value) => !value)} aria-expanded={isOpen}>
         <span style={styles.launcherMark}>AI</span>
-        <span style={styles.launcherText}>Ask Kashf</span>
+        <span style={styles.launcherText}>{translateText("Ask Kashf", language)}</span>
       </button>
     </div>
   );

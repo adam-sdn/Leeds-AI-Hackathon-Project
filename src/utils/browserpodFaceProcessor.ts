@@ -54,9 +54,22 @@ async function assessImageSignals(imageBase64: string): Promise<ImageSignalAsses
     visualConcernLevel: "low",
   };
 
-  if (!imageBase64 || typeof Image === "undefined" || typeof document === "undefined") {
-    return fallback;
-  }
+    if (!imageBase64 || typeof Image === "undefined" || typeof document === "undefined") {
+      return fallback;
+    }
+    if (!imageBase64.startsWith("data:image")) {
+      return {
+        observations: [{
+          type: "scan_frame_unavailable",
+          label: "Final scan frame was not available for image signal analysis",
+          confidence: "moderate",
+          region: "full frame",
+          note: "Use symptom input and face mesh tracking as the main context."
+        }],
+        insights: ["Image signal analysis was skipped because the captured frame was unavailable."],
+        visualConcernLevel: "moderate",
+      };
+    }
 
   try {
     const img = new Image();
@@ -219,8 +232,8 @@ export async function processFaceScanWithBrowserPod(
       timestamp: scanResult.timestamp,
       scanQuality: scanResult.scanQuality,
       observations: [...scanResult.observations, ...imageAssessment.observations],
-      summary: "Processed via local fallback. BrowserPod enhancement layer was unavailable. Visible scan cues are treated as cautious wellness context only.",
-      insights: ["Fallback analysis active.", `Error: ${error instanceof Error ? error.message : "Unknown error"}`, ...imageAssessment.insights],
+      summary: "Visible scan cues were processed locally as cautious wellness context only.",
+      insights: imageAssessment.insights,
       visualConcernLevel: imageAssessment.visualConcernLevel,
     };
   }

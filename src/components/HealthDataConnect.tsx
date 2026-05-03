@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import type { ConnectedHealthData } from '../types/health';
+import type { AppLanguage } from '../types/language';
+import { uiText } from '../utils/i18n';
 
 type HealthBrand = {
   id: string;
@@ -20,9 +22,10 @@ const brands: HealthBrand[] = [
 
 type HealthDataConnectProps = {
   onComplete: (data?: ConnectedHealthData) => void;
+  language: AppLanguage;
 };
 
-export default function HealthDataConnect({ onComplete }: HealthDataConnectProps) {
+export default function HealthDataConnect({ onComplete, language }: HealthDataConnectProps) {
   const [selected, setSelected] = useState<string | null>(null);
 
   const handleSelect = (id: string) => {
@@ -33,9 +36,9 @@ export default function HealthDataConnect({ onComplete }: HealthDataConnectProps
     <div className="health-connect-view animate-fade" style={{ maxWidth: '640px', margin: '0 auto', width: '100%' }}>
       <div style={{ textAlign: 'center', marginBottom: '40px' }}>
         <h2 style={{ fontSize: '32px', fontWeight: 800, color: '#0F172A', marginBottom: '12px', letterSpacing: '-0.5px' }}>
-          Connect Health Data
+          {uiText(language, "connectHealthTitle")}
         </h2>
-        <p style={{ color: '#64748B', fontSize: '16px' }}>Select your health app or wearable to personalize your assessment.</p>
+        <p style={{ color: '#64748B', fontSize: '16px' }}>{uiText(language, "connectHealthSub")}</p>
       </div>
 
       <div style={{ 
@@ -117,8 +120,8 @@ export default function HealthDataConnect({ onComplete }: HealthDataConnectProps
             textAlign: 'center'
           }}>
             <p style={{ color: '#166534', margin: 0, fontSize: '14px', lineHeight: '1.5' }}>
-              <strong>Live integration coming soon.</strong><br/>
-              Using demo health profile for this session.
+              <strong>{uiText(language, "liveIntegration")}</strong><br/>
+              {uiText(language, "demoProfile")}
             </p>
           </div>
 
@@ -168,7 +171,7 @@ export default function HealthDataConnect({ onComplete }: HealthDataConnectProps
               onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#1E293B'}
               onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#0F172A'}
             >
-              Connect My Data
+              {uiText(language, "connectMyData")}
             </button>
           </div>
         </div>
@@ -189,7 +192,7 @@ export default function HealthDataConnect({ onComplete }: HealthDataConnectProps
               padding: '12px'
             }}
           >
-            Continue without health data →
+            {uiText(language, "continueWithout")} →
           </button>
         </div>
       )}
@@ -206,7 +209,7 @@ export default function HealthDataConnect({ onComplete }: HealthDataConnectProps
         justifyContent: 'center',
         gap: '8px'
       }}>
-        <span>🔒</span> Your health data is processed locally and never leaves your browser.
+        <span>🔒</span> {uiText(language, "localData")}
       </div>
     </div>
   );

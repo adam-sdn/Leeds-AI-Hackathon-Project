@@ -7,6 +7,7 @@
 
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import type { AnalysisResult } from "./riskEngine";
+import { findNhsReferencesForText } from "./riskEngine";
 import type { FaceScanResult } from "../components/FaceScan";
 import type { ConnectedHealthData } from "../types/health";
 import type { AppLanguage } from "../types/language";
@@ -176,7 +177,10 @@ ${conversation}
 
 ${safetyGuidelines()}
 
-Return plain text only. Do not use markdown tables. Do not invent missing medical history.
+NHS SYMPTOMS A TO Z REFERENCES MATCHED TO THIS RESULT
+${input.analysis.nhsReferences.map((reference) => `- ${reference.label}: ${reference.url}`).join("\n") || "- https://www.nhs.uk/symptoms/"}
+
+Return plain text only. Do not use markdown tables. If the user asks about a symptom that was not selected, answer cautiously, say it is outside the submitted assessment context, and point them to the nearest NHS Symptoms A to Z reference if one is available. Do not invent missing medical history.
 `;
 
   try {
@@ -271,6 +275,16 @@ function generateChatFallback(
   const symptoms = input.analysis.selectedSymptomLabels.join(", ") || "your reported symptoms";
   const nextStep = tailoredInsight?.nextStep || input.analysis.recommendation;
   const safety = "This is not a medical diagnosis. If symptoms are severe, sudden, worsening, or you are worried, seek medical advice; call 999 or go to A&E if you feel seriously unwell.";
+  const nhsMatches = findNhsReferencesForText(latestUserMessage);
+  const activeReferences = nhsMatches.length > 0 ? nhsMatches : input.analysis.nhsReferences;
+
+  if (activeReferences.length > 0 && (question.includes("symptom") || question.includes("nhs") || nhsMatches.length > 0 || question.includes("why") || question.includes("what is"))) {
+    const referenceText = activeReferences.map((reference) => `${reference.label}: ${reference.url}`).join("; ");
+    const contextNote = nhsMatches.length > 0
+      ? "I matched your question to the NHS Symptoms A to Z reference list."
+      : "I matched your submitted symptoms to the NHS Symptoms A to Z reference list.";
+    return `${contextNote} Relevant NHS reference(s): ${referenceText}. Based on your submitted assessment, the next step is: ${nextStep} If this symptom is new, severe, sudden, worsening, or worrying, seek medical advice rather than relying on this check. ${safety}`;
+  }
 
   if (question.includes("gp") || question.includes("doctor")) {
     const gpQuestions = tailoredInsight?.dynamicGPQuestions || input.analysis.gpQuestions;

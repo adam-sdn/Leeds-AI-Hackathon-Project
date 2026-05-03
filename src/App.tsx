@@ -8,15 +8,16 @@ import FaceScan from "./components/FaceScan";
 import AccessibilityMenu from "./components/AccessibilityMenu";
 import HealthDataConnect from "./components/HealthDataConnect";
 import ResultsLoadingTerminal from "./components/ResultsLoadingTerminal";
+import LanguageRefreshOverlay from "./components/LanguageRefreshOverlay";
 import type { FaceScanResult } from "./components/FaceScan";
 import type { ConnectedHealthData } from "./types/health";
 import { languageLabels } from "./types/language";
 import type { AppLanguage } from "./types/language";
+import { uiText } from "./utils/i18n";
 import "./App.css";
 
 type Severity = "mild" | "moderate" | "severe";
 type View = "health" | "form" | "scan";
-type Theme = "light" | "dark";
 
 interface AnalyzePayload {
   symptoms: string[];
@@ -29,8 +30,8 @@ function App() {
   const [view, setView] = useState<View>("scan");
   const [scanResult, setScanResult] = useState<FaceScanResult | null>(null);
   const [healthData, setHealthData] = useState<ConnectedHealthData | null>(null);
-  const [theme, setTheme] = useState<Theme>("dark");
   const [language, setLanguage] = useState<AppLanguage>("en");
+  const [isRefreshingLanguage, setIsRefreshingLanguage] = useState(false);
   const [isPreparingResults, setIsPreparingResults] = useState(false);
 
   const [accSettings, setAccSettings] = useState({
@@ -68,13 +69,23 @@ function App() {
     setView("scan");
   }
 
+  function handleLanguageChange(nextLanguage: AppLanguage) {
+    if (nextLanguage === language) return;
+    setIsRefreshingLanguage(true);
+    window.setTimeout(() => {
+      setLanguage(nextLanguage);
+      window.setTimeout(() => setIsRefreshingLanguage(false), 700);
+    }, 250);
+  }
+
   return (
     <div
       className="app-shell"
       data-high-contrast={accSettings.highContrast}
       data-large-text={accSettings.largeText}
       data-colour-blind={accSettings.colourBlindSafe}
-      data-theme={theme}
+      data-theme="dark"
+      dir={language === "ar" ? "rtl" : "ltr"}
     >
       <header className="header">
         <div className="brand-header-group" onClick={handleReset}>
@@ -85,27 +96,18 @@ function App() {
         </div>
 
         <div className="header-nav">
-          <AccessibilityMenu settings={accSettings} onToggle={handleToggleAcc} />
+          <AccessibilityMenu settings={accSettings} onToggle={handleToggleAcc} language={language} />
 
           <select
             className="language-select"
             value={language}
-            onChange={(event) => setLanguage(event.target.value as AppLanguage)}
+            onChange={(event) => handleLanguageChange(event.target.value as AppLanguage)}
             aria-label="Select report and chat language"
           >
             {Object.entries(languageLabels).map(([value, label]) => (
               <option key={value} value={value}>{label}</option>
             ))}
           </select>
-
-          <button
-            className="theme-toggle"
-            onClick={() => setTheme((current) => current === "dark" ? "light" : "dark")}
-            type="button"
-            aria-label="Toggle light and dark theme"
-          >
-            {theme === "dark" ? "Light" : "Dark"}
-          </button>
 
           <button
             className={`nav-btn ${view === "scan" ? "nav-btn--active" : ""}`}
@@ -116,32 +118,33 @@ function App() {
             }}
             type="button"
           >
-            Face scan
+            {uiText(language, "faceScan")}
           </button>
         </div>
       </header>
 
       <main className="app-main">
+        {isRefreshingLanguage && <LanguageRefreshOverlay language={language} />}
         {isPreparingResults ? (
           <ResultsLoadingTerminal />
         ) : view === "health" ? (
-          <HealthDataConnect onComplete={handleHealthComplete} />
+          <HealthDataConnect onComplete={handleHealthComplete} language={language} />
         ) : view === "scan" ? (
           <div className="scan-view animate-fade">
-            <FaceScan onScanComplete={(res) => setScanResult(res)} />
+            <FaceScan onScanComplete={(res) => setScanResult(res)} language={language} />
             <button className="btn-secondary" style={{ marginTop: "24px" }} onClick={() => setView("health")}>
-              Continue to health data
+              {uiText(language, "continueHealth")}
             </button>
           </div>
         ) : !result ? (
           <div className="form-view animate-fade">
             <div className="page-intro">
-              <h1 className="page-title">How are you feeling?</h1>
+              <h1 className="page-title">{uiText(language, "howFeeling")}</h1>
               <p className="page-sub">
-                Select your symptoms below and we'll help you understand what to do next.
+                {uiText(language, "howFeelingSub")}
               </p>
             </div>
-            <SymptomForm onAnalyze={handleAnalyze} />
+            <SymptomForm onAnalyze={handleAnalyze} language={language} />
           </div>
         ) : (
           <div className="results-container animate-fade">

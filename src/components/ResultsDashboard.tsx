@@ -10,6 +10,7 @@ import type { ConnectedHealthData } from "../types/health";
 import type { AppLanguage } from "../types/language";
 import { languageLabels } from "../types/language";
 import { translateText } from "../utils/translation";
+import { uiText } from "../utils/i18n";
 
 type Props = {
   result: AnalysisResult;
@@ -80,6 +81,10 @@ export default function ResultsDashboard({ result, scanResult, healthData, langu
   const impactData = getImpactData(result.riskLevel);
   const [tailoredInsight, setTailoredInsight] = useState<TailoredInsight | null>(null);
   const [isLoadingAI, setIsLoadingAI] = useState(true);
+  const cleanScanInsights = (scanResult?.insights || []).filter((insight) =>
+    !/fallback|error|api key|failed/i.test(insight)
+  );
+  const tx = (text: string) => translateText(text, language);
 
   useEffect(() => {
     const synthesize = async () => {
@@ -303,8 +308,8 @@ export default function ResultsDashboard({ result, scanResult, healthData, langu
     result.why.forEach(line => { addBullet(line); y += 2; });
     if (scanResult && scanResult.observations.length > 0) {
       addBullet("Some facial wellness signals were noted that may be worth discussing with a clinician.");
-      if (scanResult.insights && scanResult.insights.length > 0) {
-        scanResult.insights.forEach(insight => addBullet(`BP Insight: ${insight}`));
+      if (cleanScanInsights.length > 0) {
+        cleanScanInsights.forEach(insight => addBullet(`Scan insight: ${insight}`));
       }
       y += 2;
     }
@@ -331,13 +336,13 @@ export default function ResultsDashboard({ result, scanResult, healthData, langu
       doc.setFontSize(11);
       scanResult.observations.forEach(obs => { addBullet(obs.label); y += 2; });
       
-      if (scanResult.insights && scanResult.insights.length > 0) {
+      if (cleanScanInsights.length > 0) {
         y += 4;
         doc.setFont("helvetica", "bold");
         doc.text("BrowserPod Local Insights:", margin, y);
         y += 6;
         doc.setFont("helvetica", "normal");
-        scanResult.insights.forEach(insight => { addBullet(insight); y += 2; });
+        cleanScanInsights.forEach(insight => { addBullet(insight); y += 2; });
       }
 
       y += 4;
@@ -416,7 +421,7 @@ export default function ResultsDashboard({ result, scanResult, healthData, langu
 
   return (
     <div style={styles.container}>
-      <h2 style={styles.title}>Your Assessment Report</h2>
+      <h2 style={styles.title}>{uiText(language, "reportTitle")}</h2>
 
       {/* AI Reasoning Section */}
       <div style={{ ...styles.card, background: 'linear-gradient(135deg, rgba(14, 165, 233, 0.14) 0%, rgba(37, 99, 235, 0.10) 100%)', border: '1px solid rgba(96, 165, 250, 0.32)' }}>
@@ -425,15 +430,15 @@ export default function ResultsDashboard({ result, scanResult, healthData, langu
             <span style={{ fontSize: '20px' }}>🤖</span>
           </div>
           <div>
-            <h3 style={{ ...styles.cardTitle, color: '#0369A1', marginBottom: '2px' }}>AI Synthesis</h3>
-            <p style={{ fontSize: '11px', color: '#0EA5E9', fontWeight: 600, textTransform: 'uppercase', margin: 0 }}>Tailored Perspective</p>
+            <h3 style={{ ...styles.cardTitle, color: '#0369A1', marginBottom: '2px' }}>{uiText(language, "aiSynthesis")}</h3>
+            <p style={{ fontSize: '11px', color: '#0EA5E9', fontWeight: 600, textTransform: 'uppercase', margin: 0 }}>{uiText(language, "tailoredPerspective")}</p>
           </div>
         </div>
 
         {isLoadingAI ? (
           <div style={{ padding: '20px 0', textAlign: 'center' }}>
             <div style={{ display: 'inline-block', width: '20px', height: '20px', border: '3px solid #0EA5E9', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite', marginBottom: '12px' }} />
-            <p style={{ color: '#0369A1', fontSize: '14px', fontWeight: 500 }}>Reasoning across systems...</p>
+            <p style={{ color: '#0369A1', fontSize: '14px', fontWeight: 500 }}>{uiText(language, "reasoning")}</p>
             <style>{`
               @keyframes spin { to { transform: rotate(360deg); } }
             `}</style>
@@ -441,7 +446,7 @@ export default function ResultsDashboard({ result, scanResult, healthData, langu
         ) : tailoredInsight ? (
           <div className="animate-fade">
             <p style={{ fontSize: '15px', lineHeight: '1.6', color: '#0C4A6E', marginBottom: '20px', fontWeight: 500 }}>
-              {tailoredInsight.clinicalNarrative}
+              {tx(tailoredInsight.clinicalNarrative)}
             </p>
             
             <div style={{ backgroundColor: 'var(--card)', borderRadius: '12px', padding: '16px', marginBottom: '20px', border: '1px solid var(--border)' }}>
@@ -458,7 +463,7 @@ export default function ResultsDashboard({ result, scanResult, healthData, langu
 
             <div style={{ borderTop: '1px solid #BAE6FD', paddingTop: '16px' }}>
               <p style={{ fontSize: '13px', color: '#0369A1', margin: 0 }}>
-                <strong>Personalized Advice:</strong> {tailoredInsight.personalizedAdvice}
+                <strong>Personalized Advice:</strong> {tx(tailoredInsight.personalizedAdvice)}
               </p>
             </div>
           </div>
@@ -468,17 +473,17 @@ export default function ResultsDashboard({ result, scanResult, healthData, langu
       {/* 1. Risk Summary */}
       <div style={{...styles.card, borderTop: `4px solid ${styles.colors[result.riskLevel]}`}}>
         <div style={styles.cardHeader}>
-          <h3 style={styles.cardTitle}>Risk Summary</h3>
-          <span style={styles.badge(result.riskLevel)}>{result.riskLabel}</span>
+          <h3 style={styles.cardTitle}>{uiText(language, "riskSummary")}</h3>
+          <span style={styles.badge(result.riskLevel)}>{tx(result.riskLabel)}</span>
         </div>
-        <p style={styles.summaryText}>{result.riskSummary}</p>
+        <p style={styles.summaryText}>{tx(result.riskSummary)}</p>
       </div>
 
       {/* 1.5 Your Health Signals */}
       {healthData && healthData.metrics && (
         <div style={styles.card}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-            <h3 style={{...styles.cardTitle, margin: 0}}>Your Health Signals</h3>
+            <h3 style={{...styles.cardTitle, margin: 0}}>{uiText(language, "healthSignals")}</h3>
             <span style={{ fontSize: '11px', fontWeight: 700, padding: '4px 10px', borderRadius: '20px', backgroundColor: '#F1F5F9', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
               via {healthData.brand}
             </span>
@@ -527,7 +532,7 @@ export default function ResultsDashboard({ result, scanResult, healthData, langu
           {aiInsight && (
             <div style={{ padding: '16px', backgroundColor: '#F0F9FF', borderRadius: '12px', borderLeft: '4px solid #0EA5E9', display: 'flex', gap: '12px', alignItems: 'center' }}>
               <span style={{ fontSize: '18px' }}>💡</span>
-              <p style={{ fontSize: '13px', color: '#0369A1', margin: 0, lineHeight: '1.5', fontWeight: 500 }}>{aiInsight}</p>
+              <p style={{ fontSize: '13px', color: '#0369A1', margin: 0, lineHeight: '1.5', fontWeight: 500 }}>{tx(aiInsight)}</p>
             </div>
           )}
         </div>
@@ -535,16 +540,16 @@ export default function ResultsDashboard({ result, scanResult, healthData, langu
 
       {/* 2. Recommended Next Step */}
       <div style={{ ...styles.card, borderLeft: `4px solid ${styles.colors[result.riskLevel]}` }}>
-        <h3 style={styles.cardTitle}>Recommended next step</h3>
+        <h3 style={styles.cardTitle}>{uiText(language, "recommendedNext")}</h3>
         <p style={{ fontSize: '18px', fontWeight: '760', color: 'var(--text)', marginBottom: '12px' }}>
-          {tailoredInsight?.nextStep || result.recommendation}
+          {tx(tailoredInsight?.nextStep || result.recommendation)}
         </p>
-        <p style={{ fontSize: '14px', color: 'var(--muted)' }}>{result.explanation}</p>
+        <p style={{ fontSize: '14px', color: 'var(--muted)' }}>{tx(result.explanation)}</p>
       </div>
 
       {result.nhsReferences.length > 0 && (
         <div style={styles.card}>
-          <h3 style={styles.cardTitle}>NHS Symptoms A to Z references</h3>
+          <h3 style={styles.cardTitle}>{uiText(language, "nhsReferences")}</h3>
           <p style={{ fontSize: '13px', color: 'var(--muted)', margin: '10px 0 16px' }}>
             Kashf matched your selected symptoms against the NHS A to Z index. Open these for deeper NHS guidance on causes, treatment and what to do.
           </p>
@@ -566,7 +571,7 @@ export default function ResultsDashboard({ result, scanResult, healthData, langu
 
       {/* 3. Care Impact Dashboard */}
       <div style={styles.card}>
-        <h3 style={styles.cardTitle}>Care Impact Dashboard</h3>
+        <h3 style={styles.cardTitle}>{uiText(language, "careImpact")}</h3>
         <p style={{ fontSize: '13px', color: 'var(--muted)', marginBottom: '20px' }}>
           Understanding the difference between immediate and delayed action:
         </p>
@@ -602,30 +607,30 @@ export default function ResultsDashboard({ result, scanResult, healthData, langu
 
       {/* 4. Why Kashf suggests this */}
       <div style={styles.card}>
-        <h3 style={styles.cardTitle}>Why Kashf suggests this</h3>
+        <h3 style={styles.cardTitle}>{uiText(language, "whySuggests")}</h3>
         <ul style={styles.list}>
           {(tailoredInsight?.whySuggested || result.why).map((item, index) => (
-            <li key={index} style={styles.listItem}>{item}</li>
+            <li key={index} style={styles.listItem}>{tx(item)}</li>
           ))}
           {scanResult && scanResult.observations.length > 0 && (
-            <li style={styles.listItem}>Facial wellness signals detected during scan correlate with your wellness profile.</li>
+            <li style={styles.listItem}>{tx("Facial wellness signals detected during scan correlate with your wellness profile.")}</li>
           )}
         </ul>
       </div>
 
       {/* 5. What this could mean for you */}
       <div style={styles.card}>
-        <h3 style={styles.cardTitle}>What this could mean for you</h3>
+        <h3 style={styles.cardTitle}>{uiText(language, "biggerPicture")}</h3>
         <ul style={styles.list}>
           {(tailoredInsight?.biggerPicture || result.biggerPicture).map((item, index) => (
-            <li key={index} style={styles.listItem}>{item}</li>
+            <li key={index} style={styles.listItem}>{tx(item)}</li>
           ))}
         </ul>
       </div>
 
       {/* 6. Summary for your GP */}
       <div style={{...styles.card, background: 'var(--card-soft)'}}>
-        <h3 style={styles.cardTitle}>Summary for your GP</h3>
+        <h3 style={styles.cardTitle}>{uiText(language, "gpSummary")}</h3>
         <div style={styles.gpSummaryGrid}>
           <GPItem label="Symptoms" value={result.selectedSymptomLabels.join(", ")} />
           <GPItem label="Severity" value={result.severity} />
@@ -637,13 +642,13 @@ export default function ResultsDashboard({ result, scanResult, healthData, langu
 
       {/* 7. Questions to ask your GP */}
       <div style={styles.card}>
-        <h3 style={styles.cardTitle}>Questions to ask your GP</h3>
+        <h3 style={styles.cardTitle}>{uiText(language, "gpQuestions")}</h3>
         <p style={{ fontSize: '13px', color: '#64748B', marginBottom: '16px' }}>
           Specific questions suggested by Kashf based on your unique profile:
         </p>
         <ul style={styles.list}>
           {(tailoredInsight?.dynamicGPQuestions || result.gpQuestions).map((item, index) => (
-            <li key={index} style={styles.listItem}>{item}</li>
+            <li key={index} style={styles.listItem}>{tx(item)}</li>
           ))}
         </ul>
       </div>
@@ -652,20 +657,20 @@ export default function ResultsDashboard({ result, scanResult, healthData, langu
       {scanResult && scanResult.observations.length > 0 && (
         <div style={{...styles.card, borderLeft: '4px solid #60A5FA'}}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <h3 style={styles.cardTitle}>Facial wellness observations</h3>
+            <h3 style={styles.cardTitle}>{uiText(language, "facialObservations")}</h3>
             <span style={{fontSize: '12px', color: 'var(--muted)', fontWeight: 650}}>Scan quality: {scanResult.scanQuality}</span>
           </div>
           <p style={{fontSize: '14px', color: 'var(--muted)', marginBottom: '16px'}}>Kashf noticed the following visible wellness signals:</p>
           <ul style={styles.list}>
-            {scanResult.observations.map((obs, i) => <li key={i} style={styles.listItem}>{obs.label}</li>)}
+            {scanResult.observations.map((obs, i) => <li key={i} style={styles.listItem}>{tx(obs.label)}</li>)}
           </ul>
           
-          {scanResult.insights && scanResult.insights.length > 0 && (
+          {cleanScanInsights.length > 0 && (
             <div style={{ marginTop: '16px', padding: '12px', backgroundColor: '#F0F9FF', borderRadius: '8px', borderLeft: '4px solid #0EA5E9' }}>
               <h4 style={{ margin: '0 0 8px 0', fontSize: '13px', color: '#0369A1', textTransform: 'uppercase', letterSpacing: '0.025em' }}>BrowserPod Insights</h4>
               <ul style={{ ...styles.list, marginBottom: 0 }}>
-                {scanResult.insights.map((insight, i) => (
-                  <li key={i} style={{ ...styles.listItem, color: '#0C4A6E', fontSize: '13px', marginBottom: '4px' }}>{insight}</li>
+                {cleanScanInsights.map((insight, i) => (
+                  <li key={i} style={{ ...styles.listItem, color: '#0C4A6E', fontSize: '13px', marginBottom: '4px' }}>{tx(insight)}</li>
                 ))}
               </ul>
             </div>
@@ -677,27 +682,27 @@ export default function ResultsDashboard({ result, scanResult, healthData, langu
 
       {/* 9. Safety Guidance */}
       <div style={styles.safetyCard}>
-        <h3 style={{...styles.cardTitle, color: '#991B1B', marginBottom: '8px'}}>Safety Guidance</h3>
-        <p style={{fontSize: '14px', color: '#991B1B'}}>If symptoms are severe, seek medical advice immediately. Call 999 in an emergency.</p>
+        <h3 style={{...styles.cardTitle, color: '#991B1B', marginBottom: '8px'}}>{uiText(language, "safetyGuidance")}</h3>
+        <p style={{fontSize: '14px', color: '#991B1B'}}>{tx("If symptoms are severe, seek medical advice immediately. Call 999 in an emergency.")}</p>
       </div>
 
       {/* 10. Actions */}
       <div style={{ display: 'flex', gap: '12px', flexDirection: 'column' }}>
         <div style={styles.actionGroup}>
-          <button style={styles.secondaryButton} onClick={() => downloadPDF(false)}>Download English PDF Report ↓</button>
+          <button style={styles.secondaryButton} onClick={() => downloadPDF(false)}>{uiText(language, "downloadEnglish")} ↓</button>
           {language !== "en" && (
             <button style={styles.secondaryButton} onClick={() => downloadPDF(true)}>
-              Download English + {languageLabels[language]} PDF ↓
+              {uiText(language, "downloadTranslated")} ↓
             </button>
           )}
-          <button style={styles.button} onClick={onStartAgain}>Start another check</button>
+          <button style={styles.button} onClick={onStartAgain}>{uiText(language, "startAnother")}</button>
         </div>
         {onRescanFace && (
-          <button style={styles.rescanButton} onClick={onRescanFace}>Rescan Face</button>
+          <button style={styles.rescanButton} onClick={onRescanFace}>{uiText(language, "rescanFace")}</button>
         )}
       </div>
       <ResultsChatAssistant
-        key={`${result.riskLevel}-${result.severity}-${result.duration}-${result.selectedSymptomLabels.join("|")}`}
+        key={`${language}-${result.riskLevel}-${result.severity}-${result.duration}-${result.selectedSymptomLabels.join("|")}`}
         result={result}
         scanResult={scanResult}
         healthData={healthData}
@@ -710,11 +715,11 @@ export default function ResultsDashboard({ result, scanResult, healthData, langu
 
 function ImpactMetric({ icon, label, value }: { icon: string; label: string; value: string }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px', background: '#F8FAFC', borderRadius: '8px' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px', background: 'rgba(3, 17, 42, 0.54)', borderRadius: '14px', border: '1px solid rgba(147, 197, 253, 0.18)' }}>
       <div style={{ fontSize: '14px', color: '#64748B' }}>{icon === 'clock' ? '🕒' : icon === 'pulse' ? '📈' : '⚠️'}</div>
       <div>
-        <div style={{ fontSize: '11px', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.025em' }}>{label}</div>
-        <div style={{ fontSize: '14px', color: '#0F172A', fontWeight: 600 }}>{value}</div>
+        <div style={{ fontSize: '11px', color: '#BAE6FD', textTransform: 'uppercase', letterSpacing: '0.025em' }}>{label}</div>
+        <div style={{ fontSize: '14px', color: '#F8FBFF', fontWeight: 800 }}>{value}</div>
       </div>
     </div>
   );
@@ -723,8 +728,8 @@ function ImpactMetric({ icon, label, value }: { icon: string; label: string; val
 function GPItem({ label, value, isAlert }: { label: string; value: string; isAlert?: boolean }) {
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', padding: '4px 0' }}>
-      <span style={{ fontSize: '14px', color: '#64748B', fontWeight: 600 }}>{label}:</span>
-      <span style={{ fontSize: '14px', fontWeight: '500', color: isAlert ? '#EF4444' : '#0F172A', textAlign: 'right', maxWidth: '60%' }}>{value}</span>
+      <span style={{ fontSize: '14px', color: '#BAE6FD', fontWeight: 700 }}>{label}:</span>
+      <span style={{ fontSize: '14px', fontWeight: '800', color: isAlert ? '#FCA5A5' : '#F8FBFF', textAlign: 'right', maxWidth: '60%' }}>{value}</span>
     </div>
   );
 }
@@ -740,7 +745,7 @@ function HealthMetricCard({ icon, label, value, status, badge, sub }: { icon: st
         <span style={styles.healthMetricValue}>{value}</span>
         {badge && <span style={styles.miniBadge}>{value}</span>}
       </div>
-      {sub && <div style={{ fontSize: '10px', color: '#94A3B8', marginTop: '2px' }}>{sub}</div>}
+      {sub && <div style={{ fontSize: '10px', color: '#93C5FD', marginTop: '2px' }}>{sub}</div>}
       {status && (
         <div style={{ fontSize: '11px', color: status.color, fontWeight: 600, marginTop: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
           <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: status.color }} />
@@ -763,16 +768,19 @@ const styles = {
   title: {
     fontSize: "24px",
     fontWeight: "800",
-    color: '#0F172A',
+    color: '#F8FBFF',
     textAlign: "center" as const,
     marginBottom: "8px",
+    textShadow: "0 10px 32px rgba(96, 165, 250, 0.26)",
   },
   card: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: "16px",
+    background: "linear-gradient(145deg, rgba(8, 35, 72, 0.78), rgba(3, 14, 34, 0.72))",
+    color: "#EAF4FF",
+    borderRadius: "22px",
     padding: "24px",
-    border: "1px solid #E2E8F0",
-    boxShadow: "0 4px 12px rgba(15, 23, 42, 0.03)",
+    border: "1px solid rgba(147, 197, 253, 0.28)",
+    boxShadow: "0 18px 54px rgba(2, 6, 23, 0.28), inset 0 1px 0 rgba(255,255,255,0.12)",
+    backdropFilter: "blur(18px)",
   },
   cardHeader: {
     display: 'flex',
@@ -783,7 +791,7 @@ const styles = {
   cardTitle: {
     fontSize: '16px',
     fontWeight: '700',
-    color: '#0F172A',
+    color: '#F8FBFF',
     margin: 0,
     textTransform: 'uppercase' as const,
     letterSpacing: '0.5px',
@@ -794,30 +802,31 @@ const styles = {
     fontSize: '12px',
     fontWeight: '700',
     textTransform: 'uppercase' as const,
-    backgroundColor: level === 'urgent' ? '#FEE2E2' : level === 'moderate' ? '#FEF3C7' : '#DCFCE7',
-    color: level === 'urgent' ? '#B91C1C' : level === 'moderate' ? '#92400E' : '#15803D',
+    backgroundColor: level === 'urgent' ? 'rgba(239, 68, 68, 0.18)' : level === 'moderate' ? 'rgba(245, 158, 11, 0.18)' : 'rgba(34, 197, 94, 0.18)',
+    color: level === 'urgent' ? '#FCA5A5' : level === 'moderate' ? '#FCD34D' : '#86EFAC',
+    border: '1px solid rgba(255,255,255,0.12)',
   }),
-  summaryText: { fontSize: '16px', lineHeight: '1.6', color: '#334155', margin: 0 },
-  nextStepBox: { marginTop: '12px', padding: '16px', background: '#F1F5F9', borderRadius: '12px', borderLeft: '4px solid #2F6FED' },
-  nextStepText: { fontSize: '16px', fontWeight: '600', color: '#0F172A', margin: 0 },
+  summaryText: { fontSize: '16px', lineHeight: '1.6', color: '#D8ECFF', margin: 0 },
+  nextStepBox: { marginTop: '12px', padding: '16px', background: 'rgba(3, 17, 42, 0.54)', borderRadius: '14px', borderLeft: '4px solid #60A5FA' },
+  nextStepText: { fontSize: '16px', fontWeight: '800', color: '#F8FBFF', margin: 0 },
   list: { listStyle: "none", padding: 0, margin: 0 },
-  listItem: { position: "relative" as const, paddingLeft: "20px", marginBottom: "8px", fontSize: "14px", color: "#475569" },
-  comparisonGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginTop: '20px', paddingTop: '20px', borderTop: '1px solid #E2E8F0' },
+  listItem: { position: "relative" as const, paddingLeft: "20px", marginBottom: "8px", fontSize: "14px", color: "#D8ECFF" },
+  comparisonGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginTop: '20px', paddingTop: '20px', borderTop: '1px solid rgba(147, 197, 253, 0.18)' },
   comparisonColumn: { display: 'flex', flexDirection: 'column' as const },
   comparisonTitle: { fontSize: '12px', fontWeight: '800', padding: '4px 10px', borderRadius: '6px', alignSelf: 'flex-start', marginBottom: '8px', textTransform: 'uppercase' as const },
-  healthMetricCard: { padding: '16px', backgroundColor: '#F8FAFC', borderRadius: '12px', border: '1px solid #F1F5F9' },
-  healthMetricLabel: { fontSize: '11px', color: '#64748B', fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.05em' },
-  healthMetricValue: { fontSize: '18px', fontWeight: '800', color: '#0F172A' },
-  miniBadge: { fontSize: '10px', padding: '2px 6px', borderRadius: '4px', backgroundColor: '#E0F2FE', color: '#0369A1', fontWeight: 700, textTransform: 'uppercase' as const },
+  healthMetricCard: { padding: '16px', background: 'rgba(3, 17, 42, 0.54)', borderRadius: '16px', border: '1px solid rgba(147, 197, 253, 0.18)' },
+  healthMetricLabel: { fontSize: '11px', color: '#BAE6FD', fontWeight: 800, textTransform: 'uppercase' as const, letterSpacing: '0.05em' },
+  healthMetricValue: { fontSize: '18px', fontWeight: '900', color: '#F8FBFF' },
+  miniBadge: { fontSize: '10px', padding: '2px 6px', borderRadius: '999px', backgroundColor: 'rgba(14, 165, 233, 0.18)', color: '#BAE6FD', fontWeight: 800, textTransform: 'uppercase' as const },
   gpSummaryGrid: { display: 'flex', flexDirection: 'column' as const, gap: '4px' },
-  safetyCard: { backgroundColor: "#FEF2F2", borderRadius: "16px", padding: "24px", border: "1.5px solid #FECACA" },
-  button: { padding: "16px 32px", borderRadius: "12px", border: "none", backgroundColor: "#0F172A", color: "#FFFFFF", fontSize: "16px", fontWeight: "700", cursor: "pointer", boxShadow: "0 10px 20px rgba(15, 23, 42, 0.2)", transition: 'all 0.2s' },
-  secondaryButton: { padding: "12px 24px", borderRadius: "12px", border: "1.5px solid #0F172A", backgroundColor: "transparent", color: "#0F172A", fontSize: "15px", fontWeight: "600", cursor: "pointer", transition: 'all 0.2s', width: '100%', maxWidth: '320px' },
+  safetyCard: { background: "linear-gradient(145deg, rgba(127, 29, 29, 0.34), rgba(3, 14, 34, 0.72))", color: "#FEE2E2", borderRadius: "22px", padding: "24px", border: "1.5px solid rgba(252, 165, 165, 0.34)", boxShadow: "0 18px 54px rgba(2, 6, 23, 0.28), inset 0 1px 0 rgba(255,255,255,0.12)" },
+  button: { padding: "16px 32px", borderRadius: "16px", border: "1px solid rgba(186, 230, 253, 0.38)", background: "linear-gradient(135deg, #0EA5E9, #2563EB)", color: "#FFFFFF", fontSize: "16px", fontWeight: "800", cursor: "pointer", boxShadow: "0 18px 42px rgba(37, 99, 235, 0.28)", transition: 'all 0.45s cubic-bezier(0.16, 1, 0.3, 1)' },
+  secondaryButton: { padding: "12px 24px", borderRadius: "16px", border: "1.5px solid rgba(147, 197, 253, 0.34)", background: "rgba(3, 17, 42, 0.42)", color: "#E0F2FE", fontSize: "15px", fontWeight: "800", cursor: "pointer", transition: 'all 0.45s cubic-bezier(0.16, 1, 0.3, 1)', width: '100%', maxWidth: '320px' },
   actionGroup: { display: 'flex', flexDirection: 'column' as const, gap: '12px', alignItems: 'center', marginTop: '20px' },
   rescanButton: { 
     background: 'transparent', 
     border: '2px solid #60A5FA', 
-    color: '#1E40AF', 
+    color: '#E0F2FE', 
     padding: '12px 24px', 
     marginTop: '12px', 
     borderRadius: '12px', 

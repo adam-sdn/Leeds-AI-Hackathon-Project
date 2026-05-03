@@ -1,6 +1,8 @@
 import { useCallback, useRef, useState, useEffect } from "react";
 import { processFaceScanWithBrowserPod } from "../utils/browserpodFaceProcessor";
 import type { Observation, ProcessedFaceResult, RawScanData } from "../utils/browserpodFaceProcessor";
+import type { AppLanguage } from "../types/language";
+import { uiText } from "../utils/i18n";
 
 export type { Observation, ProcessedFaceResult as FaceScanResult };
 
@@ -38,16 +40,18 @@ declare global {
 
 type Props = {
   onScanComplete?: (result: ProcessedFaceResult) => void;
+  language: AppLanguage;
 };
 
 type ScanStatus = 
   | "idle" 
   | "requesting permission" 
+  | "detecting face"
   | "scanning" 
   | "complete"
   | "error";
 
-export default function FaceScan({ onScanComplete }: Props) {
+export default function FaceScan({ onScanComplete, language }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const requestRef = useRef<number | null>(null);
@@ -55,12 +59,17 @@ export default function FaceScan({ onScanComplete }: Props) {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const frameCountRef = useRef<number>(0);
   const facesDetectedRef = useRef<number>(0);
+  const statusRef = useRef<ScanStatus>("idle");
   
   const [status, setStatus] = useState<ScanStatus>("idle");
   const [error, setError] = useState<string | null>(null);
   const [countdown, setCountdown] = useState<number>(10);
   const [scanResult, setScanResult] = useState<ProcessedFaceResult | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+
+  useEffect(() => {
+    statusRef.current = status;
+  }, [status]);
 
   const stopCamera = () => {
     if (requestRef.current) {
@@ -94,12 +103,12 @@ export default function FaceScan({ onScanComplete }: Props) {
   };
 
   const handleScanComplete = async () => {
-    stopCamera();
     setIsProcessing(true);
     
     const finalImage = captureFinalFrame();
     const totalFrames = frameCountRef.current;
     const detectedFrames = facesDetectedRef.current;
+    stopCamera();
     
     let quality = "Limited";
     if (totalFrames > 0) {
@@ -114,11 +123,11 @@ export default function FaceScan({ onScanComplete }: Props) {
 
     if (quality === "Good") {
       baseObservations.push({
-        type: "symmetry",
-        label: "Facial symmetry appears balanced",
+        type: "face_mesh_tracked",
+        label: "Face mesh tracked clearly for visible wellness context",
         confidence: "high",
         region: "full face",
-        note: "Visible wellness signal only."
+        note: "This confirms scan quality only. It is not a healthy result or a diagnosis."
       });
     } else {
       baseObservations.push({
@@ -171,29 +180,33 @@ export default function FaceScan({ onScanComplete }: Props) {
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         videoRef.current.play();
-        setStatus("scanning");
-
-        // Start countdown
-        timerRef.current = setInterval(() => {
-          setCountdown((prev) => {
-            if (prev <= 1) {
-              if (timerRef.current) {
-                clearInterval(timerRef.current);
-              }
-              setTimeout(() => {
-                handleScanComplete();
-              }, 0);
-              return 0;
-            }
-            return prev - 1;
-          });
-        }, 1000);
+        setStatus("detecting face");
       }
     } catch (err: unknown) {
       console.error("Camera access denied or failed:", err);
       setStatus("error");
       setError(err instanceof Error ? err.message : "Failed to access camera. Please check permissions.");
     }
+  };
+
+  const beginTimedScan = () => {
+    if (timerRef.current || statusRef.current === "scanning") return;
+    setStatus("scanning");
+    setCountdown(10);
+    timerRef.current = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          if (timerRef.current) {
+            clearInterval(timerRef.current);
+          }
+          setTimeout(() => {
+            handleScanComplete();
+          }, 0);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
   };
 
   const initFaceMesh = () => {
@@ -235,6 +248,9 @@ export default function FaceScan({ onScanComplete }: Props) {
 
       if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
         facesDetectedRef.current += 1;
+        if (statusRef.current === "detecting face") {
+          beginTimedScan();
+        }
         results.multiFaceLandmarks.forEach((landmarks) => {
           
           // Subtle dots for full mesh
@@ -300,6 +316,46 @@ export default function FaceScan({ onScanComplete }: Props) {
 
           drawZone(111, 45); // Left cheek/under-eye area
           drawZone(340, 45); // Right cheek/under-eye area
+
+          const drawLabel = (label: string, idx: number, offsetX: number, offsetY: number) => {
+            const p = landmarks[idx];
+            if (!p) return;
+
+            const visualX = canvas.width - (p.x * canvas.width) + offsetX;
+            const visualY = p.y * canvas.height + offsetY;
+            const paddingX = 8;
+            const height = 24;
+
+            ctx.save();
+            ctx.translate(canvas.width, 0);
+            ctx.scale(-1, 1);
+            ctx.font = "700 12px 'SF Pro Display', system-ui, sans-serif";
+            ctx.textBaseline = "middle";
+
+            const width = ctx.measureText(label).width + paddingX * 2;
+            const x = Math.max(8, Math.min(canvas.width - width - 8, visualX));
+            const y = Math.max(12, Math.min(canvas.height - height - 8, visualY));
+
+            ctx.fillStyle = "rgba(3, 17, 42, 0.82)";
+            ctx.strokeStyle = "rgba(125, 211, 252, 0.62)";
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            if (typeof ctx.roundRect === "function") {
+              ctx.roundRect(x, y, width, height, 9);
+            } else {
+              ctx.rect(x, y, width, height);
+            }
+            ctx.fill();
+            ctx.stroke();
+            ctx.fillStyle = "#E0F2FE";
+            ctx.fillText(label, x + paddingX, y + height / 2);
+            ctx.restore();
+          };
+
+          drawLabel("LEFT EYE", 263, 44, -34);
+          drawLabel("RIGHT EYE", 33, -132, -34);
+          drawLabel("NOSE", 1, 52, 4);
+          drawLabel("MOUTH", 13, -116, 26);
         });
       }
     });
@@ -309,7 +365,7 @@ export default function FaceScan({ onScanComplete }: Props) {
 
   const processVideoFrame = useCallback(async function frame() {
     if (
-      status === "scanning" &&
+      (status === "scanning" || status === "detecting face") &&
       videoRef.current && 
       faceMeshRef.current && 
       videoRef.current.readyState >= 2
@@ -320,7 +376,7 @@ export default function FaceScan({ onScanComplete }: Props) {
         console.error("FaceMesh processing error:", err);
       }
     }
-    if (status === "scanning") {
+    if (status === "scanning" || status === "detecting face") {
       requestRef.current = requestAnimationFrame(frame);
     }
   }, [status]);
@@ -342,7 +398,7 @@ export default function FaceScan({ onScanComplete }: Props) {
 
   useEffect(() => {
     const video = videoRef.current;
-    if (status === "scanning" && !requestRef.current && video && video.readyState >= 2) {
+    if ((status === "scanning" || status === "detecting face") && !requestRef.current && video && video.readyState >= 2) {
       requestRef.current = requestAnimationFrame(processVideoFrame);
     }
   }, [status, processVideoFrame]);
@@ -357,27 +413,30 @@ export default function FaceScan({ onScanComplete }: Props) {
   }, []);
 
   return (
-    <div style={{ textAlign: "center", width: "100%", maxWidth: "640px", margin: "0 auto" }}>
-      <h2 style={{ color: "#0F172A", marginBottom: "8px" }}>Face Scan Wellness Check</h2>
+    <div className="face-scan-panel" style={{ textAlign: "center", width: "100%", maxWidth: "680px", margin: "0 auto" }}>
+      <h2 style={{ color: "#EAF4FF", marginBottom: "8px" }}>{uiText(language, "faceTitle")}</h2>
       
       <div style={{ 
-        backgroundColor: "#F8FAFC", 
-        border: "1px solid #E2E8F0", 
+        background: "linear-gradient(145deg, rgba(8, 35, 72, 0.78), rgba(3, 14, 34, 0.72))", 
+        border: "1px solid rgba(147, 197, 253, 0.28)", 
         padding: "16px", 
-        borderRadius: "12px", 
-        marginBottom: "20px" 
+        borderRadius: "20px", 
+        marginBottom: "20px",
+        boxShadow: "0 18px 54px rgba(2, 6, 23, 0.28), inset 0 1px 0 rgba(255,255,255,0.12)",
+        backdropFilter: "blur(18px)"
       }}>
-        <p style={{ color: "#64748B", fontWeight: 500, margin: 0 }}>
-          Status: <span style={{ 
+        <p style={{ color: "#BAE6FD", fontWeight: 700, margin: 0 }}>
+          {uiText(language, "status")}: <span style={{ 
             color: status === "scanning" ? "#2F6FED" : 
                    status === "complete" ? "#22C55E" : 
-                   status === "error" ? "#EF4444" : "#334155" 
+                   status === "error" ? "#FCA5A5" : "#EAF4FF" 
           }}>
-            {status === "idle" && "Ready to start"}
-            {status === "requesting permission" && "Requesting camera..."}
-            {status === "scanning" && (isProcessing ? "Finalizing analysis..." : `Scanning... ${countdown}s remaining`)}
-            {status === "complete" && "Scan complete"}
-            {status === "error" && "Error"}
+            {status === "idle" && uiText(language, "ready")}
+            {status === "requesting permission" && uiText(language, "requestingCamera")}
+            {status === "detecting face" && uiText(language, "lookingForFace")}
+            {status === "scanning" && (isProcessing ? uiText(language, "finalizing") : `${uiText(language, "scanning")} ${countdown}s ${uiText(language, "remaining")}`)}
+            {status === "complete" && uiText(language, "scanComplete")}
+            {status === "error" && uiText(language, "error")}
           </span>
         </p>
       </div>
@@ -387,22 +446,22 @@ export default function FaceScan({ onScanComplete }: Props) {
           onClick={startCamera}
           style={{
             padding: "12px 32px",
-            backgroundColor: "#0F172A",
+            background: "linear-gradient(135deg, #0EA5E9, #2563EB)",
             color: "white",
-            border: "none",
-            borderRadius: "12px",
+            border: "1px solid rgba(186, 230, 253, 0.38)",
+            borderRadius: "16px",
             fontSize: "16px",
             fontWeight: "bold",
             cursor: "pointer",
             marginBottom: "24px",
-            boxShadow: "0 4px 12px rgba(15, 23, 42, 0.15)",
+            boxShadow: "0 18px 42px rgba(37, 99, 235, 0.28)",
           }}
         >
-          Start Face Scan
+          {uiText(language, "startFaceScan")}
         </button>
       )}
 
-      {status === "scanning" && (
+      {(status === "scanning" || status === "detecting face") && (
         <button 
           onClick={handleScanComplete}
           style={{
@@ -417,7 +476,7 @@ export default function FaceScan({ onScanComplete }: Props) {
             marginBottom: "24px",
           }}
         >
-          Stop Scan
+          {uiText(language, "stopScan")}
         </button>
       )}
 
@@ -428,7 +487,7 @@ export default function FaceScan({ onScanComplete }: Props) {
       )}
 
       {/* Video Container */}
-      {(status === "requesting permission" || status === "scanning") && (
+      {(status === "requesting permission" || status === "detecting face" || status === "scanning") && (
         <div 
           style={{ 
             position: "relative", 
@@ -475,26 +534,26 @@ export default function FaceScan({ onScanComplete }: Props) {
       {/* Results View */}
       {status === "complete" && scanResult && (
         <div style={{
-          backgroundColor: "white",
-          border: "1px solid #E2E8F0",
-          borderRadius: "16px",
+          background: "linear-gradient(145deg, rgba(8, 35, 72, 0.78), rgba(3, 14, 34, 0.72))",
+          border: "1px solid rgba(147, 197, 253, 0.28)",
+          borderRadius: "22px",
           padding: "32px 24px",
           textAlign: "center",
-          boxShadow: "0 4px 12px rgba(15, 23, 42, 0.03)",
+          boxShadow: "0 18px 54px rgba(2, 6, 23, 0.28), inset 0 1px 0 rgba(255,255,255,0.12)",
           marginBottom: "24px"
         }}>
           <div style={{ fontSize: "40px", marginBottom: "16px" }}>✅</div>
-          <h3 style={{ margin: "0 0 12px 0", color: "#0F172A", fontSize: "20px" }}>Face scan saved</h3>
+          <h3 style={{ margin: "0 0 12px 0", color: "#EAF4FF", fontSize: "20px" }}>{uiText(language, "faceScanSaved")}</h3>
           
-          <div style={{ display: "inline-flex", gap: "16px", marginBottom: "20px", fontSize: "14px", fontWeight: 500, backgroundColor: "#F8FAFC", padding: "8px 16px", borderRadius: "8px", border: "1px solid #E2E8F0" }}>
-            <span style={{ color: "#334155" }}>Quality: <span style={{ color: scanResult.scanQuality === "Good" ? "#16A34A" : "#D97706" }}>{scanResult.scanQuality}</span></span>
-            <span style={{ color: "#94A3B8" }}>|</span>
-            <span style={{ color: "#334155" }}>Processed: BrowserPod Engine</span>
+          <div style={{ display: "inline-flex", gap: "16px", marginBottom: "20px", fontSize: "14px", fontWeight: 700, background: "rgba(3, 17, 42, 0.62)", padding: "8px 16px", borderRadius: "999px", border: "1px solid rgba(147, 197, 253, 0.26)" }}>
+            <span style={{ color: "#E0F2FE" }}>{uiText(language, "quality")}: <span style={{ color: scanResult.scanQuality === "Good" ? "#86EFAC" : "#FCD34D" }}>{scanResult.scanQuality}</span></span>
+            <span style={{ color: "#64748B" }}>|</span>
+            <span style={{ color: "#E0F2FE" }}>{uiText(language, "processed")}</span>
           </div>
 
-          <div style={{ backgroundColor: "#EFF6FF", border: "1px solid #BFDBFE", padding: "16px", borderRadius: "12px", marginBottom: "24px", textAlign: "left" }}>
-            <p style={{ color: "#1E3A8A", margin: 0, fontSize: "14px", lineHeight: "1.5" }}>
-              <strong>Note:</strong> Facial scan observations are based on visible wellness signals only. They are included to help you describe changes, not to diagnose a condition.
+          <div style={{ background: "rgba(14, 165, 233, 0.12)", border: "1px solid rgba(125, 211, 252, 0.26)", padding: "16px", borderRadius: "16px", marginBottom: "24px", textAlign: "left" }}>
+            <p style={{ color: "#BAE6FD", margin: 0, fontSize: "14px", lineHeight: "1.5" }}>
+              <strong>Note:</strong> {uiText(language, "faceNote")}
             </p>
           </div>
           
@@ -503,15 +562,15 @@ export default function FaceScan({ onScanComplete }: Props) {
             style={{
               padding: "10px 24px",
               backgroundColor: "transparent",
-              color: "#475569",
-              border: "1px solid #CBD5E1",
-              borderRadius: "8px",
+              color: "#E0F2FE",
+              border: "1px solid rgba(147, 197, 253, 0.34)",
+              borderRadius: "14px",
               fontSize: "14px",
               fontWeight: 500,
               cursor: "pointer",
             }}
           >
-            Rescan Face
+            {uiText(language, "rescanFace")}
           </button>
         </div>
       )}

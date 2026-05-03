@@ -1,0 +1,109 @@
+import type { AppLanguage } from "../types/language";
+
+const ui: Record<AppLanguage, Record<string, string>> = {
+  en: {
+    accessibility: "Accessibility",
+    accessibilityOptions: "Accessibility Options",
+    highContrast: "High contrast",
+    highContrastDesc: "Enhanced text visibility",
+    largerText: "Larger text",
+    largerTextDesc: "Easier reading size",
+    colourBlind: "Colour-blind safe",
+    colourBlindDesc: "Accessible palette",
+    accessibilityNote: "Settings apply instantly across all Kashf screens.",
+    faceScan: "Face scan",
+    faceTitle: "Face Scan Wellness Check",
+    status: "Status",
+    ready: "Ready to start",
+    requestingCamera: "Requesting camera...",
+    lookingForFace: "Looking for face...",
+    scanning: "Scanning...",
+    remaining: "remaining",
+    finalizing: "Finalizing analysis...",
+    scanComplete: "Scan complete",
+    error: "Error",
+    startFaceScan: "Start Face Scan",
+    stopScan: "Stop Scan",
+    faceScanSaved: "Face scan saved",
+    quality: "Quality",
+    processed: "Processed: BrowserPod Engine",
+    faceNote: "Facial scan observations are based on visible wellness signals only. They are included to help you describe changes, not to diagnose a condition.",
+    rescanFace: "Rescan Face",
+    continueHealth: "Continue to health data",
+    connectHealthTitle: "Connect Health Data",
+    connectHealthSub: "Select your health app or wearable to personalize your assessment.",
+    liveIntegration: "Live integration coming soon.",
+    demoProfile: "Using demo health profile for this session.",
+    connectMyData: "Connect My Data",
+    continueWithout: "Continue without health data",
+    localData: "Your health data is processed locally and never leaves your browser.",
+    howFeeling: "How are you feeling?",
+    howFeelingSub: "Select your symptoms below and we'll help you understand what to do next.",
+    selectedSymptoms: "Selected symptoms",
+    primaryConcern: "What is your primary concern today?",
+    specificSignals: "Specific signals",
+    changeConcern: "Change concern",
+    severity: "Severity",
+    duration: "How long have you had these signals?",
+    durationPlaceholder: "e.g. 2 days, a week...",
+    analyzeSymptoms: "Analyze symptoms",
+    disclaimer: "This is not a medical diagnosis. Always consult a qualified clinician.",
+    generalSymptoms: "General symptoms",
+    breathingIssues: "Breathing issues",
+    painDiscomfort: "Pain or discomfort",
+    stomachDigestion: "Stomach & digestion",
+    mentalWellbeing: "Mental wellbeing",
+    urgentConcern: "Something urgent",
+    mild: "Mild",
+    moderate: "Moderate",
+    severe: "Severe",
+    refreshingLanguage: "Refreshing interface language",
+    reportTitle: "Your Assessment Report",
+    aiSynthesis: "AI Synthesis",
+    tailoredPerspective: "Tailored Perspective",
+    reasoning: "Reasoning across systems...",
+    riskSummary: "Risk Summary",
+    healthSignals: "Your Health Signals",
+    recommendedNext: "Recommended next step",
+    nhsReferences: "NHS Symptoms A to Z references",
+    careImpact: "Care Impact Dashboard",
+    whySuggests: "Why Kashf suggests this",
+    biggerPicture: "What this could mean for you",
+    gpSummary: "Summary for your GP",
+    gpQuestions: "Questions to ask your GP",
+    facialObservations: "Facial wellness observations",
+    safetyGuidance: "Safety Guidance",
+    startAnother: "Start another check",
+    downloadEnglish: "Download English PDF Report",
+    downloadTranslated: "Download English + translated PDF",
+  },
+  ar: {},
+  fr: {},
+  es: {},
+  zh: {},
+  pa: {},
+};
+
+Object.assign(ui.fr, {
+  accessibility: "Accessibilite", accessibilityOptions: "Options d'accessibilite", highContrast: "Contraste eleve", highContrastDesc: "Texte plus visible", largerText: "Texte plus grand", largerTextDesc: "Lecture plus facile", colourBlind: "Palette accessible", colourBlindDesc: "Couleurs adaptees", accessibilityNote: "Les reglages s'appliquent immediatement.", faceScan: "Scan du visage", faceTitle: "Controle bien-etre du visage", status: "Statut", ready: "Pret a commencer", requestingCamera: "Demande de camera...", lookingForFace: "Recherche du visage...", scanning: "Scan en cours...", remaining: "restantes", finalizing: "Finalisation de l'analyse...", scanComplete: "Scan termine", error: "Erreur", startFaceScan: "Demarrer le scan", stopScan: "Arreter le scan", faceScanSaved: "Scan du visage enregistre", quality: "Qualite", processed: "Traite: moteur BrowserPod", faceNote: "Les observations du visage sont uniquement des signaux visibles de bien-etre. Elles aident a decrire les changements, pas a diagnostiquer.", rescanFace: "Refaire le scan", continueHealth: "Continuer vers les donnees sante", connectHealthTitle: "Connecter les donnees sante", connectHealthSub: "Choisissez votre application sante ou appareil connecte.", liveIntegration: "Integration en direct bientot disponible.", demoProfile: "Profil sante de demonstration utilise.", connectMyData: "Connecter mes donnees", continueWithout: "Continuer sans donnees sante", localData: "Vos donnees sante sont traitees localement.", howFeeling: "Comment vous sentez-vous ?", howFeelingSub: "Selectionnez vos symptomes pour comprendre la suite.", selectedSymptoms: "Symptomes selectionnes", primaryConcern: "Quelle est votre principale preoccupation aujourd'hui ?", specificSignals: "Signaux precis", changeConcern: "Changer", severity: "Gravite", duration: "Depuis combien de temps ?", durationPlaceholder: "ex. 2 jours, une semaine...", analyzeSymptoms: "Analyser les symptomes", disclaimer: "Ceci n'est pas un diagnostic medical. Consultez un professionnel qualifie.", generalSymptoms: "Symptomes generaux", breathingIssues: "Problemes respiratoires", painDiscomfort: "Douleur ou gene", stomachDigestion: "Estomac et digestion", mentalWellbeing: "Bien-etre mental", urgentConcern: "Quelque chose d'urgent", mild: "Leger", moderate: "Modere", severe: "Severe", refreshingLanguage: "Actualisation de la langue", reportTitle: "Votre rapport d'evaluation", aiSynthesis: "Synthese IA", tailoredPerspective: "Perspective personnalisee", reasoning: "Analyse des signaux...", riskSummary: "Resume du risque", healthSignals: "Vos signaux sante", recommendedNext: "Prochaine etape recommandee", nhsReferences: "References NHS Symptomes A a Z", careImpact: "Impact des soins", whySuggests: "Pourquoi Kashf suggere cela", biggerPicture: "Ce que cela peut signifier", gpSummary: "Resume pour votre GP", gpQuestions: "Questions pour votre GP", facialObservations: "Observations faciales", safetyGuidance: "Conseils de securite", startAnother: "Commencer un autre controle", downloadEnglish: "Telecharger le PDF anglais", downloadTranslated: "Telecharger le PDF traduit",
+});
+
+Object.assign(ui.es, {
+  accessibility: "Accesibilidad", accessibilityOptions: "Opciones de accesibilidad", highContrast: "Alto contraste", highContrastDesc: "Texto mas visible", largerText: "Texto mas grande", largerTextDesc: "Lectura mas facil", colourBlind: "Paleta accesible", colourBlindDesc: "Colores accesibles", accessibilityNote: "Los ajustes se aplican al instante.", faceScan: "Escaneo facial", faceTitle: "Revision facial de bienestar", status: "Estado", ready: "Listo para empezar", requestingCamera: "Solicitando camara...", lookingForFace: "Buscando rostro...", scanning: "Escaneando...", remaining: "restantes", finalizing: "Finalizando analisis...", scanComplete: "Escaneo completo", error: "Error", startFaceScan: "Iniciar escaneo facial", stopScan: "Detener escaneo", faceScanSaved: "Escaneo facial guardado", quality: "Calidad", processed: "Procesado: motor BrowserPod", faceNote: "Las observaciones faciales son senales visibles de bienestar. Ayudan a describir cambios, no a diagnosticar.", rescanFace: "Repetir escaneo", continueHealth: "Continuar a datos de salud", connectHealthTitle: "Conectar datos de salud", connectHealthSub: "Elige tu app o wearable de salud.", liveIntegration: "Integracion en vivo proximamente.", demoProfile: "Usando perfil demo para esta sesion.", connectMyData: "Conectar mis datos", continueWithout: "Continuar sin datos", localData: "Tus datos se procesan localmente.", howFeeling: "Como te sientes?", howFeelingSub: "Selecciona tus sintomas para entender el siguiente paso.", selectedSymptoms: "Sintomas seleccionados", primaryConcern: "Cual es tu preocupacion principal hoy?", specificSignals: "Senales especificas", changeConcern: "Cambiar", severity: "Gravedad", duration: "Desde cuando tienes estas senales?", durationPlaceholder: "ej. 2 dias, una semana...", analyzeSymptoms: "Analizar sintomas", disclaimer: "Esto no es un diagnostico medico. Consulta a un profesional cualificado.", generalSymptoms: "Sintomas generales", breathingIssues: "Problemas respiratorios", painDiscomfort: "Dolor o molestia", stomachDigestion: "Estomago y digestion", mentalWellbeing: "Bienestar mental", urgentConcern: "Algo urgente", mild: "Leve", moderate: "Moderado", severe: "Severo", refreshingLanguage: "Actualizando idioma", reportTitle: "Tu informe de evaluacion", aiSynthesis: "Sintesis IA", tailoredPerspective: "Perspectiva personalizada", reasoning: "Analizando senales...", riskSummary: "Resumen de riesgo", healthSignals: "Tus senales de salud", recommendedNext: "Siguiente paso recomendado", nhsReferences: "Referencias NHS Sintomas A-Z", careImpact: "Impacto de atencion", whySuggests: "Por que Kashf sugiere esto", biggerPicture: "Que podria significar", gpSummary: "Resumen para tu GP", gpQuestions: "Preguntas para tu GP", facialObservations: "Observaciones faciales", safetyGuidance: "Guia de seguridad", startAnother: "Iniciar otra revision", downloadEnglish: "Descargar PDF en ingles", downloadTranslated: "Descargar PDF traducido",
+});
+
+Object.assign(ui.ar, {
+  accessibility: "إمكانية الوصول", accessibilityOptions: "خيارات الوصول", highContrast: "تباين عال", highContrastDesc: "وضوح أعلى للنص", largerText: "نص أكبر", largerTextDesc: "قراءة أسهل", colourBlind: "ألوان مناسبة", colourBlindDesc: "لوحة ألوان ميسرة", accessibilityNote: "تطبق الإعدادات فوراً.", faceScan: "فحص الوجه", faceTitle: "فحص صحة الوجه", status: "الحالة", ready: "جاهز للبدء", requestingCamera: "طلب الكاميرا...", lookingForFace: "جار العثور على الوجه...", scanning: "جار الفحص...", remaining: "متبقية", finalizing: "إنهاء التحليل...", scanComplete: "اكتمل الفحص", error: "خطأ", startFaceScan: "ابدأ فحص الوجه", stopScan: "إيقاف الفحص", faceScanSaved: "تم حفظ فحص الوجه", quality: "الجودة", processed: "تمت المعالجة: BrowserPod", faceNote: "ملاحظات فحص الوجه هي إشارات مرئية فقط وليست تشخيصاً.", rescanFace: "إعادة فحص الوجه", continueHealth: "المتابعة لبيانات الصحة", connectHealthTitle: "ربط بيانات الصحة", connectHealthSub: "اختر تطبيق الصحة أو الجهاز القابل للارتداء.", liveIntegration: "الربط المباشر قريباً.", demoProfile: "يتم استخدام ملف تجريبي.", connectMyData: "ربط بياناتي", continueWithout: "المتابعة بدون بيانات", localData: "تعالج بياناتك محلياً.", howFeeling: "كيف تشعر؟", howFeelingSub: "اختر الأعراض لفهم الخطوة التالية.", selectedSymptoms: "الأعراض المختارة", primaryConcern: "ما أهم ما يقلقك اليوم؟", specificSignals: "إشارات محددة", changeConcern: "تغيير", severity: "الشدة", duration: "منذ متى لديك هذه الإشارات؟", durationPlaceholder: "مثلاً يومان أو أسبوع...", analyzeSymptoms: "تحليل الأعراض", disclaimer: "هذا ليس تشخيصاً طبياً. استشر مختصاً مؤهلاً.", generalSymptoms: "أعراض عامة", breathingIssues: "مشاكل التنفس", painDiscomfort: "ألم أو انزعاج", stomachDigestion: "المعدة والهضم", mentalWellbeing: "الصحة النفسية", urgentConcern: "أمر عاجل", mild: "خفيف", moderate: "متوسط", severe: "شديد", refreshingLanguage: "تحديث لغة الواجهة", reportTitle: "تقرير التقييم", aiSynthesis: "ملخص الذكاء الاصطناعي", tailoredPerspective: "منظور مخصص", reasoning: "تحليل الإشارات...", riskSummary: "ملخص المخاطر", healthSignals: "إشاراتك الصحية", recommendedNext: "الخطوة التالية المقترحة", nhsReferences: "مراجع أعراض NHS", careImpact: "تأثير الرعاية", whySuggests: "لماذا يقترح Kashf ذلك", biggerPicture: "ماذا قد يعني لك", gpSummary: "ملخص للطبيب العام", gpQuestions: "أسئلة للطبيب العام", facialObservations: "ملاحظات الوجه", safetyGuidance: "إرشادات السلامة", startAnother: "ابدأ فحصاً آخر", downloadEnglish: "تحميل تقرير إنجليزي", downloadTranslated: "تحميل تقرير مترجم",
+});
+
+Object.assign(ui.zh, {
+  accessibility: "无障碍", accessibilityOptions: "无障碍选项", highContrast: "高对比度", highContrastDesc: "提高文字可见性", largerText: "更大文字", largerTextDesc: "更易阅读", colourBlind: "色盲友好", colourBlindDesc: "无障碍配色", accessibilityNote: "设置会立即应用。", faceScan: "面部扫描", faceTitle: "面部健康检查", status: "状态", ready: "准备开始", requestingCamera: "正在请求摄像头...", lookingForFace: "正在识别面部...", scanning: "正在扫描...", remaining: "剩余", finalizing: "正在完成分析...", scanComplete: "扫描完成", error: "错误", startFaceScan: "开始面部扫描", stopScan: "停止扫描", faceScanSaved: "面部扫描已保存", quality: "质量", processed: "处理: BrowserPod 引擎", faceNote: "面部观察只是可见健康信号，用于描述变化，不用于诊断。", rescanFace: "重新扫描", continueHealth: "继续到健康数据", connectHealthTitle: "连接健康数据", connectHealthSub: "选择健康应用或可穿戴设备。", liveIntegration: "实时集成即将推出。", demoProfile: "本次使用演示健康资料。", connectMyData: "连接我的数据", continueWithout: "不连接继续", localData: "你的健康数据在本地处理。", howFeeling: "你感觉如何？", howFeelingSub: "选择症状以了解下一步。", selectedSymptoms: "已选症状", primaryConcern: "今天主要担心什么？", specificSignals: "具体信号", changeConcern: "更改", severity: "严重程度", duration: "这些信号持续多久？", durationPlaceholder: "例如2天、一周...", analyzeSymptoms: "分析症状", disclaimer: "这不是医学诊断。请咨询合格临床人员。", generalSymptoms: "一般症状", breathingIssues: "呼吸问题", painDiscomfort: "疼痛或不适", stomachDigestion: "胃和消化", mentalWellbeing: "心理健康", urgentConcern: "紧急情况", mild: "轻度", moderate: "中度", severe: "重度", refreshingLanguage: "正在刷新界面语言", reportTitle: "你的评估报告", aiSynthesis: "AI 综合", tailoredPerspective: "个性化视角", reasoning: "正在分析信号...", riskSummary: "风险摘要", healthSignals: "你的健康信号", recommendedNext: "建议下一步", nhsReferences: "NHS 症状 A-Z 参考", careImpact: "护理影响", whySuggests: "Kashf 为什么这样建议", biggerPicture: "这可能意味着什么", gpSummary: "给 GP 的摘要", gpQuestions: "给 GP 的问题", facialObservations: "面部观察", safetyGuidance: "安全建议", startAnother: "开始另一次检查", downloadEnglish: "下载英文 PDF", downloadTranslated: "下载翻译 PDF",
+});
+
+Object.assign(ui.pa, {
+  accessibility: "ਪਹੁੰਚਯੋਗਤਾ", accessibilityOptions: "ਪਹੁੰਚਯੋਗਤਾ ਚੋਣਾਂ", highContrast: "ਉੱਚ ਕਾਂਟ੍ਰਾਸਟ", highContrastDesc: "ਟੈਕਸਟ ਵੱਧ ਸਾਫ", largerText: "ਵੱਡਾ ਟੈਕਸਟ", largerTextDesc: "ਪੜ੍ਹਨਾ ਆਸਾਨ", colourBlind: "ਰੰਗ-ਸੁਰੱਖਿਅਤ", colourBlindDesc: "ਪਹੁੰਚਯੋਗ ਰੰਗ", accessibilityNote: "ਸੈਟਿੰਗਾਂ ਤੁਰੰਤ ਲਾਗੂ ਹੁੰਦੀਆਂ ਹਨ.", faceScan: "ਚਿਹਰਾ ਸਕੈਨ", faceTitle: "ਚਿਹਰਾ ਸਿਹਤ ਜਾਂਚ", status: "ਸਥਿਤੀ", ready: "ਸ਼ੁਰੂ ਕਰਨ ਲਈ ਤਿਆਰ", requestingCamera: "ਕੈਮਰਾ ਮੰਗਿਆ ਜਾ ਰਿਹਾ ਹੈ...", lookingForFace: "ਚਿਹਰਾ ਲੱਭ ਰਿਹਾ ਹੈ...", scanning: "ਸਕੈਨ ਹੋ ਰਿਹਾ ਹੈ...", remaining: "ਬਾਕੀ", finalizing: "ਵਿਸ਼ਲੇਸ਼ਣ ਪੂਰਾ ਹੋ ਰਿਹਾ ਹੈ...", scanComplete: "ਸਕੈਨ ਪੂਰਾ", error: "ਗਲਤੀ", startFaceScan: "ਚਿਹਰਾ ਸਕੈਨ ਸ਼ੁਰੂ ਕਰੋ", stopScan: "ਸਕੈਨ ਰੋਕੋ", faceScanSaved: "ਚਿਹਰਾ ਸਕੈਨ ਸੰਭਾਲਿਆ", quality: "ਗੁਣਵੱਤਾ", processed: "ਪ੍ਰੋਸੈਸ: BrowserPod", faceNote: "ਚਿਹਰੇ ਦੀਆਂ ਨੋਟਾਂ ਸਿਰਫ਼ ਦਿੱਖ ਵਾਲੇ ਸੰਕੇਤ ਹਨ, ਨਿਦਾਨ ਨਹੀਂ.", rescanFace: "ਮੁੜ ਸਕੈਨ", continueHealth: "ਸਿਹਤ ਡਾਟਾ ਵੱਲ ਜਾਓ", connectHealthTitle: "ਸਿਹਤ ਡਾਟਾ ਜੋੜੋ", connectHealthSub: "ਆਪਣੀ ਸਿਹਤ ਐਪ ਜਾਂ ਵੇਅਰੇਬਲ ਚੁਣੋ.", liveIntegration: "ਲਾਈਵ ਜੋੜ ਜਲਦੀ ਆਵੇਗਾ.", demoProfile: "ਇਸ ਸੈਸ਼ਨ ਲਈ ਡੈਮੋ ਪ੍ਰੋਫ਼ਾਈਲ ਵਰਤੀ ਜਾ ਰਹੀ ਹੈ.", connectMyData: "ਮੇਰਾ ਡਾਟਾ ਜੋੜੋ", continueWithout: "ਡਾਟਾ ਬਿਨਾਂ ਜਾਰੀ ਰੱਖੋ", localData: "ਤੁਹਾਡਾ ਡਾਟਾ ਸਥਾਨਕ ਤੌਰ ਤੇ ਪ੍ਰੋਸੈਸ ਹੁੰਦਾ ਹੈ.", howFeeling: "ਤੁਸੀਂ ਕਿਵੇਂ ਮਹਿਸੂਸ ਕਰ ਰਹੇ ਹੋ?", howFeelingSub: "ਅਗਲਾ ਕਦਮ ਸਮਝਣ ਲਈ ਲੱਛਣ ਚੁਣੋ.", selectedSymptoms: "ਚੁਣੇ ਲੱਛਣ", primaryConcern: "ਅੱਜ ਮੁੱਖ ਚਿੰਤਾ ਕੀ ਹੈ?", specificSignals: "ਖਾਸ ਸੰਕੇਤ", changeConcern: "ਬਦਲੋ", severity: "ਤੀਬਰਤਾ", duration: "ਇਹ ਸੰਕੇਤ ਕਿੰਨੇ ਸਮੇਂ ਤੋਂ ਹਨ?", durationPlaceholder: "ਜਿਵੇਂ 2 ਦਿਨ, ਇੱਕ ਹਫ਼ਤਾ...", analyzeSymptoms: "ਲੱਛਣ ਵਿਸ਼ਲੇਸ਼ਣ", disclaimer: "ਇਹ ਡਾਕਟਰੀ ਨਿਦਾਨ ਨਹੀਂ. ਯੋਗ ਕਲੀਨਿਸ਼ਨ ਨਾਲ ਸਲਾਹ ਕਰੋ.", generalSymptoms: "ਆਮ ਲੱਛਣ", breathingIssues: "ਸਾਹ ਦੀ ਸਮੱਸਿਆ", painDiscomfort: "ਦਰਦ ਜਾਂ ਬੇਆਰਾਮੀ", stomachDigestion: "ਪੇਟ ਅਤੇ ਹਜ਼ਮ", mentalWellbeing: "ਮਾਨਸਿਕ ਸਿਹਤ", urgentConcern: "ਕੋਈ ਤੁਰੰਤ ਗੱਲ", mild: "ਹਲਕਾ", moderate: "ਦਰਮਿਆਨਾ", severe: "ਤੀਬਰ", refreshingLanguage: "ਭਾਸ਼ਾ ਤਾਜ਼ਾ ਕੀਤੀ ਜਾ ਰਹੀ ਹੈ", reportTitle: "ਤੁਹਾਡੀ ਰਿਪੋਰਟ", aiSynthesis: "AI ਸੰਖੇਪ", tailoredPerspective: "ਵਿਅਕਤੀਗਤ ਦ੍ਰਿਸ਼ਟੀਕੋਣ", reasoning: "ਸੰਕੇਤ ਪੜ੍ਹੇ ਜਾ ਰਹੇ ਹਨ...", riskSummary: "ਖਤਰਾ ਸੰਖੇਪ", healthSignals: "ਤੁਹਾਡੇ ਸਿਹਤ ਸੰਕੇਤ", recommendedNext: "ਸੁਝਾਇਆ ਅਗਲਾ ਕਦਮ", nhsReferences: "NHS ਲੱਛਣ ਹਵਾਲੇ", careImpact: "ਦੇਖਭਾਲ ਪ੍ਰਭਾਵ", whySuggests: "Kashf ਇਹ ਕਿਉਂ ਕਹਿੰਦਾ ਹੈ", biggerPicture: "ਇਸਦਾ ਕੀ ਮਤਲਬ ਹੋ ਸਕਦਾ ਹੈ", gpSummary: "GP ਲਈ ਸੰਖੇਪ", gpQuestions: "GP ਲਈ ਸਵਾਲ", facialObservations: "ਚਿਹਰਾ ਨੋਟਸ", safetyGuidance: "ਸੁਰੱਖਿਆ ਸਲਾਹ", startAnother: "ਹੋਰ ਜਾਂਚ ਸ਼ੁਰੂ ਕਰੋ", downloadEnglish: "ਅੰਗਰੇਜ਼ੀ PDF ਡਾਊਨਲੋਡ", downloadTranslated: "ਅਨੁਵਾਦ PDF ਡਾਊਨਲੋਡ",
+});
+
+export function uiText(language: AppLanguage, key: string): string {
+  return ui[language][key] || ui.en[key] || key;
+}

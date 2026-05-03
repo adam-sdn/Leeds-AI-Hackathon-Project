@@ -44,7 +44,8 @@ export function translateText(text: string, language: AppLanguage): string {
   if (exact) return exact;
 
   const safety = dictionary[language]["This is not a medical diagnosis."];
-  return `${text}\n[${language.toUpperCase()} translation pending for dynamic clinical wording. ${safety}]`;
+  const advice = dictionary[language]["If symptoms are severe, sudden, worsening, or you are worried, seek medical advice."];
+  return `${text}\n${safety} ${advice}`;
 }
 
 export function localisedPromptSuffix(language: AppLanguage) {
