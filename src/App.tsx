@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { analyzeSymptoms } from "./utils/riskEngine";
 import type { AnalysisResult } from "./utils/riskEngine";
 import { SymptomForm } from "./components/SymptomForm";
@@ -19,6 +19,11 @@ import "./App.css";
 
 type Severity = "mild" | "moderate" | "severe";
 type View = "home" | "health" | "form" | "scan";
+type AccessibilitySettings = {
+  highContrast: boolean;
+  largeText: boolean;
+  colourBlindSafe: boolean;
+};
 
 interface AnalyzePayload {
   symptoms: string[];
@@ -36,11 +41,41 @@ function App() {
   const [isPreparingResults, setIsPreparingResults] = useState(false);
   const [isStartingAnalysis, setIsStartingAnalysis] = useState(false);
 
-  const [accSettings, setAccSettings] = useState({
-    highContrast: false,
-    largeText: false,
-    colourBlindSafe: false,
+  const [accSettings, setAccSettings] = useState<AccessibilitySettings>(() => {
+    try {
+      const savedSettings = window.localStorage.getItem("kashf-accessibility");
+      if (savedSettings) {
+        return {
+          highContrast: false,
+          largeText: false,
+          colourBlindSafe: false,
+          ...JSON.parse(savedSettings),
+        };
+      }
+    } catch {
+      // Keep defaults if localStorage is unavailable or the saved value is malformed.
+    }
+
+    return {
+      highContrast: false,
+      largeText: false,
+      colourBlindSafe: false,
+    };
   });
+
+  useEffect(() => {
+    window.localStorage.setItem("kashf-accessibility", JSON.stringify(accSettings));
+
+    document.documentElement.dataset.highContrast = String(accSettings.highContrast);
+    document.documentElement.dataset.largeText = String(accSettings.largeText);
+    document.documentElement.dataset.colourBlind = String(accSettings.colourBlindSafe);
+
+    return () => {
+      delete document.documentElement.dataset.highContrast;
+      delete document.documentElement.dataset.largeText;
+      delete document.documentElement.dataset.colourBlind;
+    };
+  }, [accSettings]);
 
   const handleToggleAcc = (key: "highContrast" | "largeText" | "colourBlindSafe") => {
     setAccSettings((prev) => ({ ...prev, [key]: !prev[key] }));

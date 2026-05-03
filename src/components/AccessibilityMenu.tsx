@@ -22,15 +22,16 @@ export default function AccessibilityMenu({ settings, onToggle, language }: Acce
         className="accessibility-trigger"
         type="button"
         aria-expanded={isOpen}
+        aria-haspopup="dialog"
       >
-        <span aria-hidden="true">♿</span>
+        <span aria-hidden="true">A11y</span>
         <span>{uiText(language, "accessibility")}</span>
       </button>
 
       {isOpen && (
         <>
           <button className="accessibility-backdrop" aria-label="Close accessibility menu" onClick={() => setIsOpen(false)} type="button" />
-          <div className="accessibility-popover">
+          <div className="accessibility-popover" role="dialog" aria-label={uiText(language, "accessibilityOptions")}>
             <h3>{uiText(language, "accessibilityOptions")}</h3>
             <div className="accessibility-options">
               <AccessibilityToggle
@@ -62,7 +63,7 @@ export default function AccessibilityMenu({ settings, onToggle, language }: Acce
 
 function AccessibilityToggle({ label, active, onClick, description }: { label: string; active: boolean; onClick: () => void; description: string }) {
   return (
-    <button className={`accessibility-toggle ${active ? "is-active" : ""}`} onClick={onClick} type="button">
+    <button className={`accessibility-toggle ${active ? "is-active" : ""}`} onClick={onClick} type="button" aria-pressed={active}>
       <span>
         <strong>{label}</strong>
         <small>{description}</small>
