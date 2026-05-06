@@ -60,6 +60,7 @@ export default function FaceScan({ onScanComplete, language }: Props) {
   const frameCountRef = useRef<number>(0);
   const facesDetectedRef = useRef<number>(0);
   const statusRef = useRef<ScanStatus>("idle");
+  const completionRef = useRef<boolean>(false);
   
   const [status, setStatus] = useState<ScanStatus>("idle");
   const [error, setError] = useState<string | null>(null);
@@ -103,6 +104,8 @@ export default function FaceScan({ onScanComplete, language }: Props) {
   };
 
   const handleScanComplete = async () => {
+    if (completionRef.current) return;
+    completionRef.current = true;
     setIsProcessing(true);
     
     const finalImage = captureFinalFrame();
@@ -110,24 +113,27 @@ export default function FaceScan({ onScanComplete, language }: Props) {
     const detectedFrames = facesDetectedRef.current;
     stopCamera();
     
+    const detectedRatio = totalFrames > 0 ? detectedFrames / totalFrames : 0;
+    const verifiedByMediaPipe = detectedFrames >= 3 && detectedRatio >= 0.25;
     let quality = "Limited";
     if (totalFrames > 0) {
-      const ratio = detectedFrames / totalFrames;
-      if (ratio > 0.8) quality = "Good";
-      else if (ratio > 0.4) quality = "Fair";
+      if (detectedRatio > 0.8) quality = "Good";
+      else if (detectedRatio > 0.4 || verifiedByMediaPipe) quality = "Fair";
     }
 
     // Initial observations from local frontend logic. Keep these cautious:
     // visible wellness signals are supporting context, never a health verdict.
     const baseObservations: Observation[] = [];
 
-    if (quality === "Good") {
+    if (verifiedByMediaPipe) {
       baseObservations.push({
         type: "face_mesh_tracked",
-        label: "Face mesh tracked clearly for visible wellness context",
-        confidence: "high",
+        label: quality === "Good"
+          ? "Face scan verified with consistent face tracking"
+          : "Face scan verified with enough face tracking for wellness context",
+        confidence: quality === "Good" ? "high" : "moderate",
         region: "full face",
-        note: "This confirms scan quality only. It is not a healthy result or a diagnosis."
+        note: "This confirms the scan captured a face clearly enough to save context. It is not a health result or a diagnosis."
       });
     } else {
       baseObservations.push({
@@ -144,24 +150,40 @@ export default function FaceScan({ onScanComplete, language }: Props) {
       scanQuality: quality,
       framesCaptured: totalFrames,
       timestamp: new Date().toISOString(),
-      landmarksAvailable: detectedFrames > 0,
+      landmarksAvailable: verifiedByMediaPipe,
       observations: baseObservations
     };
 
-    try {
-      const result = await processFaceScanWithBrowserPod(rawData);
-      setScanResult(result);
-      setStatus("complete");
-      if (onScanComplete) {
-        onScanComplete(result);
-      }
-    } catch (err) {
-      console.error("Failed to process scan with BrowserPod:", err);
-      setStatus("error");
-      setError("Processing failed. Please try again.");
-    } finally {
-      setIsProcessing(false);
-    }
+    const localVerifiedResult: ProcessedFaceResult = {
+      scanId: `mediapipe-scan-${Date.now()}`,
+      timestamp: rawData.timestamp,
+      scanQuality: quality,
+      observations: baseObservations,
+      summary: verifiedByMediaPipe
+        ? "Face scan verified using MediaPipe face tracking and saved as visible wellness context."
+        : "Face scan completed with limited face tracking and saved as cautious visible wellness context.",
+      insights: verifiedByMediaPipe
+        ? [`MediaPipe verified ${detectedFrames} face-tracked frames from ${totalFrames} processed frames.`]
+        : [`MediaPipe detected ${detectedFrames} face-tracked frames from ${totalFrames} processed frames.`],
+      visualConcernLevel: "low",
+    };
+
+    setScanResult(localVerifiedResult);
+    setStatus("complete");
+    statusRef.current = "complete";
+    setIsProcessing(false);
+    onScanComplete?.(localVerifiedResult);
+
+    window.setTimeout(() => {
+      processFaceScanWithBrowserPod(rawData)
+        .then((result) => {
+          setScanResult(result);
+          onScanComplete?.(result);
+        })
+        .catch((err) => {
+          console.error("Failed to enhance scan with BrowserPod:", err);
+        });
+    }, 0);
   };
 
   const startCamera = async () => {
@@ -171,6 +193,7 @@ export default function FaceScan({ onScanComplete, language }: Props) {
     setCountdown(10);
     frameCountRef.current = 0;
     facesDetectedRef.current = 0;
+    completionRef.current = false;
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -544,6 +567,11 @@ export default function FaceScan({ onScanComplete, language }: Props) {
         }}>
           <div style={{ fontSize: "40px", marginBottom: "16px" }}>✅</div>
           <h3 style={{ margin: "0 0 12px 0", color: "#EAF4FF", fontSize: "20px" }}>{uiText(language, "faceScanSaved")}</h3>
+          <p style={{ color: "#BAE6FD", margin: "0 0 16px", fontSize: "14px", fontWeight: 700 }}>
+            {scanResult.scanQuality === "Limited"
+              ? "Scan saved with limited face tracking."
+              : "Face detected and scan verified."}
+          </p>
           
           <div style={{ display: "inline-flex", gap: "16px", marginBottom: "20px", fontSize: "14px", fontWeight: 700, background: "rgba(3, 17, 42, 0.62)", padding: "8px 16px", borderRadius: "999px", border: "1px solid rgba(147, 197, 253, 0.26)" }}>
             <span style={{ color: "#E0F2FE" }}>{uiText(language, "quality")}: <span style={{ color: scanResult.scanQuality === "Good" ? "#86EFAC" : "#FCD34D" }}>{scanResult.scanQuality}</span></span>

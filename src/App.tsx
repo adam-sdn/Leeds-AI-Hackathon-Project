@@ -200,8 +200,20 @@ function App() {
         ) : view === "scan" ? (
           <div className="scan-view animate-fade">
             <FaceScan onScanComplete={(res) => setScanResult(res)} language={language} />
-            <button className="btn-secondary" style={{ marginTop: "24px" }} onClick={() => setView("health")}>
-              {uiText(language, "continueHealth")}
+            <button
+              className="btn-secondary"
+              style={{
+                marginTop: "24px",
+                opacity: scanResult ? 1 : 0.56,
+                cursor: scanResult ? "pointer" : "not-allowed",
+              }}
+              onClick={() => {
+                if (scanResult) setView("health");
+              }}
+              disabled={!scanResult}
+              type="button"
+            >
+              {scanResult ? uiText(language, "continueHealth") : "Complete face scan to continue"}
             </button>
           </div>
         ) : !result ? (
