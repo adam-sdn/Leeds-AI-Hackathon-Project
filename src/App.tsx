@@ -155,28 +155,19 @@ function App() {
         <div className="header-nav">
           <AccessibilityMenu settings={accSettings} onToggle={handleToggleAcc} language={language} />
 
-          <select
-            className="language-select"
-            value={language}
-            onChange={(event) => handleLanguageChange(event.target.value as AppLanguage)}
-            aria-label="Select report and chat language"
-          >
-            {Object.entries(languageLabels).map(([value, label]) => (
-              <option key={value} value={value}>{label}</option>
-            ))}
-          </select>
-
-          <button
-            className={`nav-btn ${view === "scan" ? "nav-btn--active" : ""}`}
-            onClick={() => {
-              setView("scan");
-              setResult(null);
-              setIsPreparingResults(false);
-            }}
-            type="button"
-          >
-            {uiText(language, "faceScan")}
-          </button>
+          <label className="language-control">
+            <span className="language-control__label">Language</span>
+            <select
+              className="language-select"
+              value={language}
+              onChange={(event) => handleLanguageChange(event.target.value as AppLanguage)}
+              aria-label="Select report and chat language"
+            >
+              {Object.entries(languageLabels).map(([value, label]) => (
+                <option key={value} value={value}>{label}</option>
+              ))}
+            </select>
+          </label>
         </div>
       </header>
       )}
