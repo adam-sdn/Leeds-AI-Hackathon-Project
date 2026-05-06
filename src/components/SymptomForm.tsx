@@ -2,7 +2,7 @@ import { useState } from "react";
 import { symptoms } from "../data/symptoms";
 import type { Category } from "../data/symptoms";
 import type { AppLanguage } from "../types/language";
-import { uiText } from "../utils/i18n";
+import { symptomText, uiText } from "../utils/i18n";
 
 type Severity = "mild" | "moderate" | "severe";
 
@@ -62,7 +62,7 @@ export function SymptomForm({ onAnalyze, language }: SymptomFormProps) {
           <div className="selected-chips">
             {selectedObjects.map((s) => (
               <span key={s.value} className="chip-active">
-                {s.label}
+                {symptomText(language, s.value, s.label)}
                 <button type="button" onClick={() => removeSymptom(s.value)} className="chip-remove">x</button>
               </span>
             ))}
@@ -113,7 +113,7 @@ export function SymptomForm({ onAnalyze, language }: SymptomFormProps) {
                     className="symptom-chip__input"
                   />
                   <span className="symptom-chip__icon">{s.redFlag ? "⚠" : "●"}</span>
-                  {s.label}
+                  {symptomText(language, s.value, s.label)}
                 </label>
               );
             })}
