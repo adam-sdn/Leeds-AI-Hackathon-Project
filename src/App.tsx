@@ -1,11 +1,10 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { analyzeSymptoms } from "./utils/riskEngine";
 import type { AnalysisResult } from "./utils/riskEngine";
 import { SymptomForm } from "./components/SymptomForm";
 import ResultsDashboard from "./components/ResultsDashboard";
 import RedFlagAlert from "./components/RedFlagAlert";
 import FaceScan from "./components/FaceScan";
-import AccessibilityMenu from "./components/AccessibilityMenu";
 import HealthDataConnect from "./components/HealthDataConnect";
 import ResultsLoadingTerminal from "./components/ResultsLoadingTerminal";
 import LanguageRefreshOverlay from "./components/LanguageRefreshOverlay";
@@ -19,11 +18,6 @@ import "./App.css";
 
 type Severity = "mild" | "moderate" | "severe";
 type View = "home" | "health" | "form" | "scan";
-type AccessibilitySettings = {
-  highContrast: boolean;
-  largeText: boolean;
-  colourBlindSafe: boolean;
-};
 
 interface AnalyzePayload {
   symptoms: string[];
@@ -40,46 +34,6 @@ function App() {
   const [isRefreshingLanguage, setIsRefreshingLanguage] = useState(false);
   const [isPreparingResults, setIsPreparingResults] = useState(false);
   const [isStartingAnalysis, setIsStartingAnalysis] = useState(false);
-
-  const [accSettings, setAccSettings] = useState<AccessibilitySettings>(() => {
-    try {
-      const savedSettings = window.localStorage.getItem("kashf-accessibility");
-      if (savedSettings) {
-        return {
-          highContrast: false,
-          largeText: false,
-          colourBlindSafe: false,
-          ...JSON.parse(savedSettings),
-        };
-      }
-    } catch {
-      // Keep defaults if localStorage is unavailable or the saved value is malformed.
-    }
-
-    return {
-      highContrast: false,
-      largeText: false,
-      colourBlindSafe: false,
-    };
-  });
-
-  useEffect(() => {
-    window.localStorage.setItem("kashf-accessibility", JSON.stringify(accSettings));
-
-    document.documentElement.dataset.highContrast = String(accSettings.highContrast);
-    document.documentElement.dataset.largeText = String(accSettings.largeText);
-    document.documentElement.dataset.colourBlind = String(accSettings.colourBlindSafe);
-
-    return () => {
-      delete document.documentElement.dataset.highContrast;
-      delete document.documentElement.dataset.largeText;
-      delete document.documentElement.dataset.colourBlind;
-    };
-  }, [accSettings]);
-
-  const handleToggleAcc = (key: "highContrast" | "largeText" | "colourBlindSafe") => {
-    setAccSettings((prev) => ({ ...prev, [key]: !prev[key] }));
-  };
 
   const handleHealthComplete = (data?: ConnectedHealthData) => {
     if (data) setHealthData(data);
@@ -137,9 +91,6 @@ function App() {
   return (
     <div
       className="app-shell"
-      data-high-contrast={accSettings.highContrast}
-      data-large-text={accSettings.largeText}
-      data-colour-blind={accSettings.colourBlindSafe}
       data-theme="dark"
       dir={language === "ar" ? "rtl" : "ltr"}
     >
@@ -153,10 +104,10 @@ function App() {
         </div>
 
         <div className="header-nav">
-          <AccessibilityMenu settings={accSettings} onToggle={handleToggleAcc} language={language} />
-
           <label className="language-control">
             <span className="language-control__label">Language</span>
+            <span className="language-control__wash" aria-hidden="true" />
+            <span className="language-control__gradient" aria-hidden="true" />
             <select
               className="language-select"
               value={language}
